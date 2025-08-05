@@ -11,7 +11,7 @@ void main() {
     GetMaterialApp(
       debugShowCheckedModeBanner: false,
       title: "Pharma App",
-      initialRoute: AppPages.INITIAL,
+      initialRoute: Routes.ALL_PRODUCTS,
       getPages: AppPages.routes,
       theme: AppThemes.lightTheme,
       darkTheme: AppThemes.lightTheme,

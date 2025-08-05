@@ -1,5 +1,7 @@
 import 'package:get/get.dart';
 
+import '../modules/all_products/bindings/all_products_binding.dart';
+import '../modules/all_products/views/all_products_view.dart';
 import '../modules/home/bindings/home_binding.dart';
 import '../modules/home/views/home_view.dart';
 import '../modules/login_screen/bindings/login_screen_binding.dart';
@@ -36,6 +38,11 @@ class AppPages {
       name: _Paths.SELECT_CUSTOMER,
       page: () => const SelectCustomerView(),
       binding: SelectCustomerBinding(),
+    ),
+    GetPage(
+      name: _Paths.ALL_PRODUCTS,
+      page: () => const AllProductsView(),
+      binding: AllProductsBinding(),
     ),
   ];
 }

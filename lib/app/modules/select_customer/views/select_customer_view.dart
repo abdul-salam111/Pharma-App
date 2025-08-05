@@ -6,6 +6,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:pharma_app/app/core/core.dart';
 import 'package:pharma_app/app/modules/widgets/custom_button.dart';
+import 'package:pharma_app/app/routes/app_pages.dart';
 import '../controllers/select_customer_controller.dart';
 
 class SelectCustomerView extends GetView<SelectCustomerController> {
@@ -366,7 +367,9 @@ class SelectCustomerView extends GetView<SelectCustomerController> {
         return CustomButton(
           radius: 10,
           text: "Select Customer",
-          onPressed: isEnabled ? controller.onCustomerSelected : () {},
+          onPressed: isEnabled ? controller.onCustomerSelected : () {
+            Get.toNamed(Routes.ALL_PRODUCTS);
+          },
           backgroundColor: isEnabled
               ? AppColors.appPrimaryColor
               : AppColors.greyColor,
