@@ -12,10 +12,13 @@ class AllProductsController extends GetxController {
   void onInit() {
     super.onInit();
     fetchProducts();
+    searchController.addListener(filterProducts);
   }
+
 
   @override
   void onClose() {
+    searchController.removeListener(filterProducts);
     searchController.dispose();
     searchFocusNode.dispose();
     super.onClose();
@@ -24,20 +27,34 @@ class AllProductsController extends GetxController {
   var isLoading = false.obs;
 
   RxList<GetAllProductsModel> getAllProducts = <GetAllProductsModel>[].obs;
-  RxList<GetAllProductsModel> filterdProducts = <GetAllProductsModel>[].obs;
+  RxList<GetAllProductsModel> filteredProducts = <GetAllProductsModel>[].obs;
 
   void fetchProducts() async {
     try {
       isLoading.value = true;
       getAllProducts.value = await ProductsRepository.getAllProducts();
+      filteredProducts.value = List.from(
+        getAllProducts,
+      ); 
       isLoading.value = false;
     } catch (error) {
       AppToasts.showErrorToast(
         Get.context!,
-        'Failed to load towns: ${error.toString()}',
+        'Failed to load products: ${error.toString()}',
       );
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  void filterProducts() {
+    final query = searchController.text.toLowerCase();
+    if (query.isEmpty) {
+      filteredProducts.value = List.from(getAllProducts);
+    } else {
+      filteredProducts.value = getAllProducts.where((product) {
+        return product.productName?.toLowerCase().contains(query) == true;
+      }).toList();
     }
   }
 

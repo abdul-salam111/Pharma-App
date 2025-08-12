@@ -137,7 +137,9 @@ class AllProductsView extends GetView<AllProductsController> {
                 controller: controller.searchController,
                 focusNode: controller.searchFocusNode, // ← added
                 hintText: "Search medicines...",
-                onChanged: (query) {},
+                onChanged: (query) {
+               controller.filterProducts();
+                },
               ),
 
               Obx(
@@ -146,9 +148,9 @@ class AllProductsView extends GetView<AllProductsController> {
                     : Expanded(
                         child: ListView.separated(
                           padding: EdgeInsets.zero,
-                          itemCount: controller.getAllProducts.length,
+                       itemCount: controller.filteredProducts.length,
                           itemBuilder: (context, index) {
-                            final product = controller.getAllProducts[index];
+                          final product = controller.filteredProducts[index];
                             return Padding(
                               padding: const EdgeInsets.symmetric(
                                 vertical: 8.0,
