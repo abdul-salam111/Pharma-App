@@ -8,6 +8,10 @@ abstract class Routes {
   static const LOGIN_SCREEN = _Paths.LOGIN_SCREEN;
   static const SELECT_CUSTOMER = _Paths.SELECT_CUSTOMER;
   static const ALL_PRODUCTS = _Paths.ALL_PRODUCTS;
+  static const CREATE_ORDER = _Paths.CREATE_ORDER;
+  static const ORDERS_SUMMARY = _Paths.ORDERS_SUMMARY;
+  static const ORDERS_ON_DATE = _Paths.ORDERS_ON_DATE;
+  static const ORDER_DETAILS_ON_DATE = _Paths.ORDER_DETAILS_ON_DATE;
 }
 
 abstract class _Paths {
@@ -17,4 +21,8 @@ abstract class _Paths {
   static const LOGIN_SCREEN = '/login-screen';
   static const SELECT_CUSTOMER = '/select-customer';
   static const ALL_PRODUCTS = '/all-products';
+  static const CREATE_ORDER = '/create-order';
+  static const ORDERS_SUMMARY = '/orders-summary';
+  static const ORDERS_ON_DATE = '/orders-on-date';
+  static const ORDER_DETAILS_ON_DATE = '/order-details-on-date';
 }

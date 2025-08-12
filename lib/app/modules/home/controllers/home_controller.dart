@@ -9,7 +9,7 @@ class HomeController extends GetxController {
       cardIcon: "assets/icons/cloud_upload.png",
       cardName: "Sync Orders",
       onTap: () {
-       Get.toNamed(Routes.SELECT_CUSTOMER);
+        Get.toNamed(Routes.SELECT_CUSTOMER);
       },
       textColor: Color(0xff0872EB),
     ),
@@ -18,7 +18,7 @@ class HomeController extends GetxController {
       cardIcon: "assets/icons/order_summary.png",
       cardName: "Order Summary",
       onTap: () {
-        // Navigate to Pharmacy page
+        Get.toNamed(Routes.ORDERS_SUMMARY);
       },
       textColor: Color(0xff350BBF),
     ),

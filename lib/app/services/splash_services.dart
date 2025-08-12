@@ -1,27 +1,29 @@
-// import 'dart:async';
-// import 'package:anmol_marketing/routes/app_routes.dart';
-// import 'package:anmol_marketing/services/session_manager.dart';
-// import 'package:flutter/material.dart';
-// import 'package:get/route_manager.dart';
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:get/route_manager.dart';
+import 'package:pharma_app/app/routes/app_pages.dart';
+import 'package:pharma_app/app/services/session_manager.dart';
 
-// // import 'session_manager.dart';
+// import 'session_manager.dart';
 
-// class SplashServices {
-//   void isLoggedIn() {
-//     checkLoginStatus();
-//   }
+class SplashServices {
+  void isLoggedIn() {
+  Future.delayed(Duration(seconds: 2),(){
+     checkLoginStatus();
+  });
+  }
 
-//   Future<void> checkLoginStatus() async {
-//     try {
-//       await SessionController().getUserfromSharedpref();
+  Future<void> checkLoginStatus() async {
+    try {
+      await SessionController().getUserfromSharedpref();
 
-//       if (SessionController().islogin == true) {
-//         Get.offAllNamed(AppRoutes.navbar);
-//       } else {
-//         Get.offAllNamed(AppRoutes.login);
-//       }
-//     } catch (e) {
-//       debugPrint('Error in checkLoginStatus: $e');
-//     }
-//   }
-// }
+      if (SessionController().islogin == true) {
+        Get.offAllNamed(Routes.HOME);
+      } else {
+        Get.offAllNamed(Routes.LOGIN_SCREEN);
+      }
+    } catch (e) {
+      debugPrint('Error in checkLoginStatus: $e');
+    }
+  }
+}

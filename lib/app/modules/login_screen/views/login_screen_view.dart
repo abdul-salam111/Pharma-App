@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:pharma_app/app/core/core.dart';
+import 'package:pharma_app/app/core/utils/validators.dart';
 import 'package:pharma_app/app/modules/widgets/custom_button.dart';
 import 'package:pharma_app/app/modules/widgets/custom_textfield.dart';
 import '../controllers/login_screen_controller.dart';
@@ -25,7 +26,6 @@ class LoginScreenView extends GetView<LoginScreenController> {
           ),
         ),
         child: Scaffold(
-
           backgroundColor: Colors.transparent,
           body: SingleChildScrollView(
             child: Padding(
@@ -49,6 +49,7 @@ class LoginScreenView extends GetView<LoginScreenController> {
                   ),
                   heightBox(40),
                   Form(
+                    key: controller.formKey,
                     child: Column(
                       children: [
                         CustomTextFormField(
@@ -58,6 +59,8 @@ class LoginScreenView extends GetView<LoginScreenController> {
                           keyboardType: TextInputType.text,
                           borderColor: AppColors.darkGreyColor,
                           fillColor: AppColors.halfWhiteColor,
+                          validator: (p0) =>
+                              Validator.validateRequired("Customer Key"),
                         ),
                         heightBox(10),
                         CustomTextFormField(
@@ -67,6 +70,8 @@ class LoginScreenView extends GetView<LoginScreenController> {
                           keyboardType: TextInputType.phone,
                           borderColor: AppColors.darkGreyColor,
                           fillColor: AppColors.halfWhiteColor,
+                          validator: (p0) =>
+                              Validator.validateRequired("Mobile Number"),
                         ),
                         heightBox(10),
                         CustomTextFormField(
@@ -77,16 +82,26 @@ class LoginScreenView extends GetView<LoginScreenController> {
                           keyboardType: TextInputType.text,
                           borderColor: AppColors.darkGreyColor,
                           fillColor: AppColors.halfWhiteColor,
+                          validator: (p0) =>
+                              Validator.validateRequired("Password"),
                         ),
                         heightBox(40),
                         SizedBox(
                           height: 50,
                           width: double.infinity,
-                          child: CustomButton(
-                            radius: 10,
-                            text: "Sign In",
-                            onPressed: () {},
-                            backgroundColor: AppColors.appPrimaryColor,
+                          child: Obx(
+                            () => CustomButton(
+                              isLoading: controller.isLoading.value,
+                              radius: 10,
+                              text: "Sign In",
+                              onPressed: () async {
+                                if (controller.formKey.currentState!
+                                    .validate()) {
+                                  await controller.loginUser();
+                                }
+                              },
+                              backgroundColor: AppColors.appPrimaryColor,
+                            ),
                           ),
                         ),
                       ],

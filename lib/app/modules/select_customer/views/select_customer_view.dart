@@ -5,8 +5,10 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:pharma_app/app/core/core.dart';
+import 'package:pharma_app/app/data/models/get_models/get_customers_model.dart';
+import 'package:pharma_app/app/data/models/get_models/get_sectors_model.dart';
+import 'package:pharma_app/app/data/models/get_models/get_towns_model.dart';
 import 'package:pharma_app/app/modules/widgets/custom_button.dart';
-import 'package:pharma_app/app/routes/app_pages.dart';
 import '../controllers/select_customer_controller.dart';
 
 class SelectCustomerView extends GetView<SelectCustomerController> {
@@ -15,13 +17,31 @@ class SelectCustomerView extends GetView<SelectCustomerController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Select Customer'), centerTitle: true),
-      body: Padding(
-        padding: padding14,
-        child: Column(
-          children: [heightBox(20), _buildCustomerSelectionCard(context)],
-        ),
+      appBar: AppBar(
+        title: const Text('Select Customer'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: () => controller.refreshData(),
+            icon: const Icon(Iconsax.refresh),
+          ),
+        ],
       ),
+      body: Obx(() {
+        if (controller.isAnyLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        return Padding(
+          padding: padding14,
+          child: Column(
+            children: [
+              heightBox(20),
+              _buildCustomerSelectionCard(context),
+            ],
+          ),
+        );
+      }),
     );
   }
 
@@ -41,123 +61,88 @@ class SelectCustomerView extends GetView<SelectCustomerController> {
           heightBox(20),
           _buildCustomerDropdown(context),
           heightBox(20),
-          Obx(
-            () => controller.isSelectionComplete
-                ? Container(
-                    width: double.infinity,
-                    padding: padding14,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.borderColor),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: crossAxisStart,
-                      children: [
-                        Text(
-                          "Customer Details",
-                          style: context.bodyMediumStyle!.copyWith(
-                            color: AppColors.blackTextColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        heightBox(20),
-                        Row(
-                          mainAxisAlignment: mainAxisSpaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                "Address:",
-                                style: context.displayLargeStyle!.copyWith(
-                                  color: AppColors.blackTextColor,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: crossAxisEnd,
-                                children: [
-                                  Text(
-                                    "${controller.selectedCustomer.value?.address}",
-                                    style: context.displayLargeStyle!.copyWith(
-                                      color: AppColors.greyTextColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        heightBox(10),
-                        Row(
-                          mainAxisAlignment: mainAxisSpaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                "Contact Person:",
-                                style: context.displayLargeStyle!.copyWith(
-                                  color: AppColors.blackTextColor,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: crossAxisEnd,
-
-                                children: [
-                                  Text(
-                                    "${controller.selectedCustomer.value?.customerContact}",
-                                    style: context.displayLargeStyle!.copyWith(
-                                      color: AppColors.greyTextColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        heightBox(10),
-                        Row(
-                          mainAxisAlignment: mainAxisSpaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                "Phone:",
-                                style: context.displayLargeStyle!.copyWith(
-                                  color: AppColors.blackTextColor,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: crossAxisEnd,
-
-                                children: [
-                                  Text(
-                                    "${controller.selectedCustomer.value?.phoneNumber}",
-                                    style: context.displayLargeStyle!.copyWith(
-                                      color: AppColors.greyTextColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  )
-                : SizedBox.shrink(),
-          ),
+          _buildCustomerDetailsSection(context),
           heightBox(40),
           _buildSelectButton(context),
         ],
       ),
+    );
+  }
+
+  Widget _buildCustomerDetailsSection(BuildContext context) {
+    return Obx(
+      () => controller.isSelectionComplete
+          ? Container(
+              width: double.infinity,
+              padding: padding14,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.borderColor),
+              ),
+              child: Column(
+                crossAxisAlignment: crossAxisStart,
+                children: [
+                  Text(
+                    "Customer Details",
+                    style: context.bodyMediumStyle!.copyWith(
+                      color: AppColors.blackTextColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  heightBox(20),
+                  _buildDetailRow(
+                    context,
+                    "Name:",
+                    controller.selectedCustomerModel?.customerName ?? "N/A",
+                  ),
+                  heightBox(10),
+                  _buildDetailRow(
+                    context,
+                    "Address:",
+                    controller.selectedCustomerModel?.address ?? "N/A",
+                  ),
+                  heightBox(10),
+                  _buildDetailRow(
+                    context,
+                    "Contact Person:",
+                    controller.selectedCustomerModel?.contactPerson ?? "N/A",
+                  ),
+                  heightBox(10),
+                  _buildDetailRow(
+                    context,
+                    "Phone:",
+                    controller.selectedCustomerModel?.phone1 ?? "N/A",
+                  ),
+                ],
+              ),
+            )
+          : const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
+    return Row(
+      mainAxisAlignment: mainAxisSpaceBetween,
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: context.displayLargeStyle!.copyWith(
+              color: AppColors.blackTextColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: context.displayLargeStyle!.copyWith(
+              color: AppColors.greyTextColor,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -190,14 +175,16 @@ class SelectCustomerView extends GetView<SelectCustomerController> {
     return SizedBox(
       height: context.screenHeight * 0.05,
       child: Obx(
-        () => _buildDropdownSearch<String>(
+        () => _buildDropdownSearch<GetSectorsModel>(
           items: controller.sectors,
           selectedItem: controller.selectedSector.value,
-          hintText: "Sector",
+          hintText: "Select Sector",
           searchHint: "Search Sector...",
-          enabled: true,
+          enabled: controller.sectors.isNotEmpty,
           onChanged: (value) => controller.onSectorChanged(value),
           context: context,
+          itemAsString: (item) => item?.sectorName ?? "",
+          isLoading: controller.isLoadingSectors.value,
         ),
       ),
     );
@@ -207,14 +194,15 @@ class SelectCustomerView extends GetView<SelectCustomerController> {
     return SizedBox(
       height: context.screenHeight * 0.05,
       child: Obx(
-        () => _buildDropdownSearch<String>(
+        () => _buildDropdownSearch<GetTownsModel>(
           items: controller.towns,
           selectedItem: controller.selectedTown.value,
-          hintText: "Town",
+          hintText: "Select Town",
           searchHint: "Search Town...",
-          enabled: controller.selectedSector.value.isNotEmpty,
+          enabled: controller.selectedSector.value != null && controller.towns.isNotEmpty,
           onChanged: (value) => controller.onTownChanged(value),
           context: context,
+          itemAsString: (item) => item?.townName ?? "",
         ),
       ),
     );
@@ -224,14 +212,15 @@ class SelectCustomerView extends GetView<SelectCustomerController> {
     return SizedBox(
       height: context.screenHeight * 0.05,
       child: Obx(
-        () => _buildDropdownSearch<CustomerModel>(
+        () => _buildDropdownSearch<GetCustomersModel>(
           items: controller.customers,
           selectedItem: controller.selectedCustomer.value,
-          hintText: "Customer",
+          hintText: "Select Customer",
           searchHint: "Search Customer...",
-          enabled: controller.selectedTown.value.isNotEmpty,
+          enabled: controller.selectedTown.value != null && controller.customers.isNotEmpty,
           onChanged: (value) => controller.onCustomerChanged(value),
           context: context,
+          itemAsString: (item) => item?.customerName ?? "",
         ),
       ),
     );
@@ -239,36 +228,33 @@ class SelectCustomerView extends GetView<SelectCustomerController> {
 
   Widget _buildDropdownSearch<T>({
     required List<T> items,
-    required dynamic selectedItem,
+    required T? selectedItem,
     required String hintText,
     required String searchHint,
     required bool enabled,
     required Function(T?) onChanged,
     required BuildContext context,
+    required String Function(T?) itemAsString,
+    bool isLoading = false,
   }) {
     return DropdownSearch<T>(
       items: (filter, _) => items,
-      selectedItem: selectedItem == "" ? null : selectedItem,
+      selectedItem: selectedItem,
       onChanged: onChanged,
-      enabled: enabled,
-      compareFn: (T a, T b) {
-        if (T == CustomerModel) {
-          return (a as CustomerModel).name == (b as CustomerModel).name;
-        }
-        return a == b;
+      enabled: enabled && !isLoading,
+      compareFn: (T? a, T? b) {
+        if (a == null || b == null) return a == b;
+        return itemAsString(a) == itemAsString(b);
       },
-      itemAsString: (item) {
-        if (item is CustomerModel) return item.name;
-        return item.toString();
-      },
-      popupProps: _buildPopupProps(searchHint, context),
+      itemAsString: itemAsString,
+      popupProps: _buildPopupProps<T>(searchHint, context, itemAsString),
       decoratorProps: DropDownDecoratorProps(
         baseStyle: context.bodySmallStyle!.copyWith(
           color: AppColors.greyTextColor,
         ),
         decoration: _buildInputDecoration(
-          hintText: hintText,
-          enabled: enabled,
+          hintText: isLoading ? "Loading..." : hintText,
+          enabled: enabled && !isLoading,
           context: context,
         ),
       ),
@@ -288,7 +274,6 @@ class SelectCustomerView extends GetView<SelectCustomerController> {
       hintText: hintText,
       contentPadding: EdgeInsets.zero,
       hintStyle: context.bodySmallStyle!.copyWith(color: iconColor),
-      // suffixIcon: Icon(Iconsax.arrow_down_1, color: iconColor, size: 15),
       border: _buildUnderlineBorder(AppColors.borderColor),
       enabledBorder: _buildUnderlineBorder(AppColors.borderColor),
       focusedBorder: _buildUnderlineBorder(AppColors.greyColor),
@@ -302,7 +287,11 @@ class SelectCustomerView extends GetView<SelectCustomerController> {
     return UnderlineInputBorder(borderSide: BorderSide(color: color));
   }
 
-  PopupProps<T> _buildPopupProps<T>(String searchHint, BuildContext context) {
+  PopupProps<T> _buildPopupProps<T>(
+    String searchHint,
+    BuildContext context,
+    String Function(T?) itemAsString,
+  ) {
     return PopupProps.menu(
       showSearchBox: true,
       searchFieldProps: TextFieldProps(
@@ -329,30 +318,34 @@ class SelectCustomerView extends GetView<SelectCustomerController> {
       ),
       menuProps: const MenuProps(backgroundColor: Colors.white, elevation: 8),
       itemBuilder: (context, item, isDisabled, isSelected) {
-        if (item is CustomerModel) {
-          return ListTile(
-            title: Text(
-              item.name,
-              style: context.bodySmallStyle!.copyWith(
-                color: isSelected
-                    ? AppColors.appPrimaryColor
-                    : AppColors.blackTextColor,
-              ),
-            ),
-            subtitle: Text(
-              item.address,
-              style: context.bodySmallStyle!.copyWith(
-                color: AppColors.greyTextColor,
-              ),
-            ),
-            enabled: !isDisabled,
-            selected: isSelected,
-          );
+        String displayText = itemAsString(item);
+        String? subtitle;
+        
+        // Add subtitle for customers to show additional info
+        if (T == GetCustomersModel && item != null) {
+          final customer = item as GetCustomersModel;
+          subtitle = customer.address;
         }
-
-        // Fallback if item is not CustomerModel
+        
         return ListTile(
-          title: Text(item.toString(), style: context.bodySmallStyle),
+          title: Text(
+            displayText,
+            style: context.bodySmallStyle!.copyWith(
+              color: isSelected
+                  ? AppColors.appPrimaryColor
+                  : AppColors.blackTextColor,
+            ),
+          ),
+          subtitle: subtitle != null
+              ? Text(
+                  subtitle,
+                  style: context.bodySmallStyle!.copyWith(
+                    color: AppColors.greyTextColor,
+                  ),
+                )
+              : null,
+          enabled: !isDisabled,
+          selected: isSelected,
         );
       },
     );
@@ -367,9 +360,12 @@ class SelectCustomerView extends GetView<SelectCustomerController> {
         return CustomButton(
           radius: 10,
           text: "Select Customer",
-          onPressed: isEnabled ? controller.onCustomerSelected : () {
-            Get.toNamed(Routes.ALL_PRODUCTS);
-          },
+          onPressed: isEnabled
+              ? () {
+                  controller.onCustomerSelected();
+               
+                }
+              : (){},
           backgroundColor: isEnabled
               ? AppColors.appPrimaryColor
               : AppColors.greyColor,

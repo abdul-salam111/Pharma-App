@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pharma_app/app/core/core.dart';
 import 'package:pharma_app/app/routes/app_pages.dart';
+import 'package:pharma_app/app/services/session_manager.dart';
+import 'package:pharma_app/app/services/storage.dart';
 import '../controllers/home_controller.dart';
 
 class HomeView extends GetView<HomeController> {
@@ -26,7 +28,7 @@ class HomeView extends GetView<HomeController> {
             children: [
               heightBox(120),
               Text(
-                "Welcome, Abdul Salam",
+                "Welcome, ${SessionController().getUserDetails.userName}",
                 style: context.headlineSmallStyle!.copyWith(
                   color: AppColors.blackTextColor,
                 ),
@@ -126,7 +128,43 @@ class HomeView extends GetView<HomeController> {
               Align(
                 alignment: bottomRight,
                 child: TextButton.icon(
-                  onPressed: () {},
+                  onPressed: () {
+                    Get.dialog(
+                      AlertDialog(
+                        backgroundColor: Colors.white,
+                        title: const Text("Logout"),
+                        content: const Text("Are you sure you want to logout?"),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Get.back();
+                            },
+                            child: const Text("Cancel"),
+                          ),
+                          ElevatedButton(
+                            onPressed: () async {
+                              Get.back();
+                              await storage.clearValues(
+                                StorageKeys.userDetails,
+                              );
+                              await storage.clearValues(StorageKeys.userId);
+                              await storage.clearValues(StorageKeys.loggedIn);
+                              Get.offAllNamed(Routes.LOGIN_SCREEN);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                            ),
+                            child: Text(
+                              "Logout",
+                              style: context.bodySmallStyle!.copyWith(
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                   label: Text(
                     "Logout",
                     style: context.bodyMediumStyle!.copyWith(

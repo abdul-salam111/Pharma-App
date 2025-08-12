@@ -1,167 +1,211 @@
 import 'package:get/get.dart';
-
-/// Model representing a Customer
-class CustomerModel {
-  final String name;
-  final String address;
-  final String? phoneNumber;
-  final String? customerContact;
-
-  CustomerModel({
-    required this.name,
-    required this.address,
-    required this.phoneNumber,
-    this.customerContact,
-  });
-
-  @override
-  String toString() => name;
-}
+import 'package:pharma_app/app/core/utils/apptoast.dart';
+import 'package:pharma_app/app/data/models/get_models/get_customers_model.dart';
+import 'package:pharma_app/app/data/models/get_models/get_sectors_model.dart';
+import 'package:pharma_app/app/data/models/get_models/get_towns_model.dart';
+import 'package:pharma_app/app/repositories/customer_repository/customer_repository.dart';
+import 'package:pharma_app/app/repositories/location_repository/location_repository.dart';
+import 'package:pharma_app/app/routes/app_pages.dart';
 
 /// Controller to manage the selection of Sector → Town → Customer
 class SelectCustomerController extends GetxController {
-  // Master lists (in real apps these come from APIs)
-  final List<String> allSectors = [];
-  final Map<String, List<String>> allTowns = {};
-  final Map<String, List<CustomerModel>> allCustomers = {};
+  // All fetched data from APIs
+  final List<GetSectorsModel> _allSectors = [];
+  final List<GetTownsModel> _allTowns = [];
+  final List<GetCustomersModel> _allCustomers = [];
 
-  // Observable lists used for dropdowns
-  final sectors = <String>[].obs;
-  final towns = <String>[].obs;
-  final customers = <CustomerModel>[].obs;
+  // Observable lists used for dropdowns (filtered based on selection)
+  final sectors = <GetSectorsModel>[].obs;
+  final towns = <GetTownsModel>[].obs;
+  final customers = <GetCustomersModel>[].obs;
 
   // Selected dropdown values
-  final RxString selectedSector = "".obs;
-  final RxString selectedTown = "".obs;
-  final Rx<CustomerModel?> selectedCustomer = Rx<CustomerModel?>(null);
+  final Rx<GetSectorsModel?> selectedSector = Rx<GetSectorsModel?>(null);
+  final Rx<GetTownsModel?> selectedTown = Rx<GetTownsModel?>(null);
+  final Rx<GetCustomersModel?> selectedCustomer = Rx<GetCustomersModel?>(null);
 
-  // Loading state
+  // Loading states
+  final isLoadingSectors = false.obs;
+  final isLoadingTowns = false.obs;
   final isLoadingCustomers = false.obs;
 
   @override
   void onInit() {
     super.onInit();
-    _fetchDropdownData();
+    _initializeData();
   }
 
-  /// Loads all dropdown data (simulate APIs for now)
-  void _fetchDropdownData() {
-    _fetchSectors();
-    _fetchTowns();
-    _fetchCustomers();
+  /// Initialize all data by fetching from APIs
+  Future<void> _initializeData() async {
+    await _fetchAllData();
+    _setupInitialDropdowns();
   }
 
-  /// Simulate fetching sectors
-  void _fetchSectors() {
-    allSectors.addAll(["Sector A", "Sector B"]);
-    sectors.assignAll(allSectors);
+  /// Fetch all data from APIs
+  Future<void> _fetchAllData() async {
+    await Future.wait([_fetchSectors(), _fetchTowns(), _fetchCustomers()]);
   }
 
-  /// Simulate fetching towns for each sector
-  void _fetchTowns() {
-    allTowns.addAll({
-      "Sector A": ["Town A1", "Town A2"],
-      "Sector B": ["Town B1", "Town B2"],
-    });
+  /// Fetch all sectors from API
+  Future<void> _fetchSectors() async {
+    try {
+      isLoadingSectors.value = true;
+      final List<GetSectorsModel> fetchedSectors =
+          await LocationRepository.getAllSectors();
+
+      _allSectors.clear();
+      _allSectors.addAll(fetchedSectors);
+    } catch (error) {
+      AppToasts.showErrorToast(
+        Get.context!,
+        'Failed to load sectors: ${error.toString()}',
+      );
+    } finally {
+      isLoadingSectors.value = false;
+    }
   }
 
-  /// Simulate fetching customers for each town
-  void _fetchCustomers() {
-    allCustomers.addAll({
-      "Town A1": [
-        CustomerModel(
-          name: "Customer A1-1",
-          address: "House 1, Town A1",
-          phoneNumber: "1234567890",
-          customerContact: "123459908",
-        ),
-        CustomerModel(
-          name: "Customer A1-2",
-          address: "Street 2, Town A1",
-          phoneNumber: "0987654321",
-          customerContact: "0987654321",
-        ),
-      ],
-      "Town A2": [
-        CustomerModel(
-          name: "Customer A2-1",
-          address: "House 3, Town A2",
-          phoneNumber: "1122334455",
-          customerContact: "1122334455",
-        ),
-      ],
-      "Town B1": [
-        CustomerModel(
-          name: "Customer B1-1",
-          address: "House 4, Town B1",
-          phoneNumber: "2233445566",
-          customerContact: "2233445566",
-        ),
-      ],
-      "Town B2": [
-        CustomerModel(
-          name: "Customer B2-1",
-          address: "Street 5, Town B2",
-          phoneNumber: "3344556677",
-          customerContact: "3344556677",
-        ),
-      ],
-    });
+  /// Fetch all towns from API
+  Future<void> _fetchTowns() async {
+    try {
+      isLoadingTowns.value = true;
+      final List<GetTownsModel> fetchedTowns =
+          await LocationRepository.getAllTowns();
+
+      _allTowns.clear();
+      _allTowns.addAll(fetchedTowns);
+    } catch (error) {
+      AppToasts.showErrorToast(
+        Get.context!,
+        'Failed to load towns: ${error.toString()}',
+      );
+    } finally {
+      isLoadingTowns.value = false;
+    }
+  }
+
+  /// Fetch all customers from API
+  Future<void> _fetchCustomers() async {
+    try {
+      isLoadingCustomers.value = true;
+      final List<GetCustomersModel> fetchedCustomers =
+          await CustomerRepository.getAllCustomers();
+
+      _allCustomers.clear();
+      _allCustomers.addAll(fetchedCustomers);
+    } catch (error) {
+      AppToasts.showErrorToast(
+        Get.context!,
+        'Failed to load customers: ${error.toString()}',
+      );
+    } finally {
+      isLoadingCustomers.value = false;
+    }
+  }
+
+  /// Setup initial dropdown data (show all sectors)
+  void _setupInitialDropdowns() {
+    sectors.assignAll(_allSectors);
+    towns.clear();
+    customers.clear();
   }
 
   /// When a sector is selected
-  void onSectorChanged(String? value) {
-    selectedSector.value = value ?? "";
-    selectedTown.value = "";
+  void onSectorChanged(GetSectorsModel? sector) {
+    selectedSector.value = sector;
+    selectedTown.value = null;
     selectedCustomer.value = null;
 
-    towns.assignAll(allTowns[selectedSector.value] ?? []);
+    if (sector != null) {
+      // Filter towns based on selected sector
+      final filteredTowns = _allTowns
+          .where(
+            (town) =>
+                town.actualSectorId == sector.id ||
+                town.actualSectorId.toString() == sector.id.toString(),
+          )
+          .toList();
+
+      towns.assignAll(filteredTowns);
+    } else {
+      towns.clear();
+    }
+
     customers.clear();
   }
 
   /// When a town is selected
-  void onTownChanged(String? value) {
-    selectedTown.value = value ?? "";
+  void onTownChanged(GetTownsModel? town) {
+    selectedTown.value = town;
     selectedCustomer.value = null;
-    _loadCustomers();
+
+    if (town != null && selectedSector.value != null) {
+      // Filter customers based on selected sector and town
+      final filteredCustomers = _allCustomers
+          .where(
+            (customer) =>
+                (customer.actualTownId.toString() ==
+                selectedTown.value!.id.toString()),
+          )
+          .toList();
+
+      customers.assignAll(filteredCustomers);
+    } else {
+      customers.clear();
+    }
   }
 
   /// When a customer is selected
-  void onCustomerChanged(CustomerModel? customer) {
+  void onCustomerChanged(GetCustomersModel? customer) {
     selectedCustomer.value = customer;
   }
 
   /// Whether all selections are complete
   bool get isSelectionComplete =>
-      selectedSector.value.isNotEmpty &&
-      selectedTown.value.isNotEmpty &&
+      selectedSector.value != null &&
+      selectedTown.value != null &&
       selectedCustomer.value != null;
+
+  /// Get selected sector name for display
+  String get selectedSectorName => selectedSector.value?.sectorName ?? "";
+
+  /// Get selected town name for display
+  String get selectedTownName => selectedTown.value?.townName ?? "";
+
+  /// Get selected customer for display
+  GetCustomersModel? get selectedCustomerModel => selectedCustomer.value;
 
   /// Final action after selecting customer
   void onCustomerSelected() {
     final customer = selectedCustomer.value;
-    if (customer != null) {
-      Get.snackbar("Selected", "${customer.name} - ${customer.address}");
+    final sector = selectedSector.value;
+    final town = selectedTown.value;
+
+    if (customer != null && sector != null && town != null) {
+      Get.toNamed(
+        Routes.ALL_PRODUCTS,
+        arguments: [
+          selectedCustomer.value,
+          selectedTown.value,
+          selectedSector.value,
+        ],
+      );
     }
   }
 
-  /// Loads customers for selected town
-  Future<void> _loadCustomers() async {
-    if (selectedTown.value.isEmpty) {
-      customers.clear();
-      return;
-    }
+  /// Refresh all data
+  Future<void> refreshData() async {
+    selectedSector.value = null;
+    selectedTown.value = null;
+    selectedCustomer.value = null;
 
-    try {
-      isLoadingCustomers.value = true;
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      final customerList = allCustomers[selectedTown.value] ?? [];
-      customers.assignAll(customerList);
-    } catch (e) {
-      Get.snackbar('Failed to load customers', e.toString());
-    } finally {
-      isLoadingCustomers.value = false;
-    }
+    await _fetchAllData();
+    _setupInitialDropdowns();
   }
+
+  /// Get loading state for any operation
+  bool get isAnyLoading =>
+      isLoadingSectors.value ||
+      isLoadingTowns.value ||
+      isLoadingCustomers.value;
 }
