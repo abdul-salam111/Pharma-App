@@ -15,7 +15,6 @@ class AllProductsController extends GetxController {
     searchController.addListener(filterProducts);
   }
 
-
   @override
   void onClose() {
     searchController.removeListener(filterProducts);
@@ -33,9 +32,7 @@ class AllProductsController extends GetxController {
     try {
       isLoading.value = true;
       getAllProducts.value = await ProductsRepository.getAllProducts();
-      filteredProducts.value = List.from(
-        getAllProducts,
-      ); 
+      filteredProducts.value = List.from(getAllProducts);
       isLoading.value = false;
     } catch (error) {
       AppToasts.showErrorToast(
