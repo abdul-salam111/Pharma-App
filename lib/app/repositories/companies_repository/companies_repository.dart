@@ -6,7 +6,7 @@ import 'package:pharma_app/app/services/session_manager.dart';
 
 class CompaniesRepository {
   static final _dioHelper = DioHelper();
-  static Future<List<GetCompaniesModel>> getAllProducts() async {
+  static Future<List<GetCompaniesModel>> getAllCompanies() async {
     try {
       final response = await _dioHelper.postApi(
         url: ApiKeys.getCompaniesUrl,

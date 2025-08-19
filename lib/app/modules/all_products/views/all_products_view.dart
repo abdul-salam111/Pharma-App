@@ -12,6 +12,7 @@ import '../controllers/all_products_controller.dart';
 
 class AllProductsView extends GetView<AllProductsController> {
   const AllProductsView({super.key});
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -48,38 +49,42 @@ class AllProductsView extends GetView<AllProductsController> {
                   heightBox(3),
                 ],
               ),
-              Column(
-                crossAxisAlignment: crossAxisStart,
-                mainAxisAlignment: mainAxisCenter,
+              Obx(
+                () => controller.selectedCompanyId.isNotEmpty
+                    ? Column(
+                        crossAxisAlignment: crossAxisStart,
+                        mainAxisAlignment: mainAxisCenter,
 
-                children: [
-                  Text(
-                    "Company",
-                    style: context.bodySmallStyle!.copyWith(
-                      color: Colors.white,
-                    ),
-                  ),
+                        children: [
+                          Text(
+                            "Company",
+                            style: context.bodySmallStyle!.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
 
-                  Obx(
-                    () => Text(
-                      "${controller.companyTotal.value}",
-                      style: context.bodySmallStyle!.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  Obx(
-                    () => Text(
-                      "${controller.companyTotalItems.value}",
-                      style: context.bodySmallStyle!.copyWith(
-                        color: Colors.white,
+                          Obx(
+                            () => Text(
+                              "${controller.companyTotal.value}",
+                              style: context.bodySmallStyle!.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Obx(
+                            () => Text(
+                              "${controller.companyTotalItems.value}",
+                              style: context.bodySmallStyle!.copyWith(
+                                color: Colors.white,
 
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : SizedBox.shrink(),
               ),
               Column(
                 crossAxisAlignment: crossAxisStart,
@@ -127,7 +132,27 @@ class AllProductsView extends GetView<AllProductsController> {
             ],
           ),
         ),
-        appBar: AppBar(title: const Text('All Companies'), centerTitle: true),
+        appBar: AppBar(
+          title: GestureDetector(
+            onTap: () {
+              _showCompanySelectionBottomSheet(context);
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Obx(
+                  () => Text(
+                    controller.selectedCompany.value,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.keyboard_arrow_down, size: 20),
+              ],
+            ),
+          ),
+          centerTitle: true,
+        ),
         body: Padding(
           padding: screenPadding,
           child: Column(
@@ -135,33 +160,34 @@ class AllProductsView extends GetView<AllProductsController> {
               heightBox(10),
               CustomSearchField(
                 controller: controller.searchController,
-                focusNode: controller.searchFocusNode, // ← added
+                focusNode: controller.searchFocusNode,
                 hintText: "Search medicines...",
                 onChanged: (query) {
-               controller.filterProducts();
+                  controller.filterProducts();
                 },
               ),
-
               Obx(
                 () => controller.isLoading.value
-                    ? Center(child: LoadingIndicator())
+                    ? const Center(child: LoadingIndicator())
                     : Expanded(
                         child: ListView.separated(
                           padding: EdgeInsets.zero,
-                       itemCount: controller.filteredProducts.length,
+                          itemCount: controller.filteredProducts.length,
                           itemBuilder: (context, index) {
-                          final product = controller.filteredProducts[index];
+                            final product = controller.filteredProducts[index];
                             return Padding(
                               padding: const EdgeInsets.symmetric(
                                 vertical: 8.0,
                                 horizontal: 4,
                               ),
                               child: Row(
-                                mainAxisAlignment: mainAxisSpaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: crossAxisStart,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           "${product.productName} ${product.packing}",
@@ -242,7 +268,6 @@ class AllProductsView extends GetView<AllProductsController> {
                                     ),
                                   ),
                                   widthBox(10),
-
                                   RichText(
                                     text: TextSpan(
                                       children: [
@@ -266,7 +291,6 @@ class AllProductsView extends GetView<AllProductsController> {
                                     ),
                                   ),
                                   widthBox(10),
-
                                   RichText(
                                     text: TextSpan(
                                       children: [
@@ -294,7 +318,7 @@ class AllProductsView extends GetView<AllProductsController> {
                                     width: 24,
                                     child: IconButton(
                                       padding: EdgeInsets.zero,
-                                      constraints: BoxConstraints(),
+                                      constraints: const BoxConstraints(),
                                       icon: const Icon(
                                         Icons.unfold_more,
                                         size: 15,
@@ -307,7 +331,6 @@ class AllProductsView extends GetView<AllProductsController> {
                                         );
                                         controller.searchFocusNode.unfocus();
                                       },
-
                                       color: AppColors.appPrimaryColor,
                                     ),
                                   ),
@@ -325,6 +348,152 @@ class AllProductsView extends GetView<AllProductsController> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showCompanySelectionBottomSheet(BuildContext context) {
+    controller.searchFocusNode.unfocus();
+    Get.bottomSheet(
+      CompanySelectionBottomSheet(),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+    );
+    controller.searchFocusNode.unfocus();
+  }
+}
+
+class CompanySelectionBottomSheet extends GetView<AllProductsController> {
+  const CompanySelectionBottomSheet({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: context.screenHeight * 0.85,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(top: 12, bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Select Company",
+                  style: context.bodyLargeStyle!.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.blackTextColor,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Get.back(),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+          ),
+
+          const Divider(height: 1),
+
+          // Search field
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: CustomSearchField(
+              controller: controller.companySearchController,
+              focusNode: controller.companySearchFocusNode,
+              hintText: "Search companies...",
+              onChanged: (query) {
+                controller.filterCompanies();
+              },
+            ),
+          ),
+
+          // All Companies option
+          ListTile(
+            title: Text("All Companies", style: context.bodyMediumStyle),
+            subtitle: Obx(
+              () => Text(
+                "${controller.getAllProducts.length} products",
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+            ),
+
+            onTap: () {
+              controller.selectCompany("All Companies", "");
+            },
+          ),
+
+          const Divider(height: 1),
+
+          // Companies list
+          Expanded(
+            child: Obx(
+              () => controller.isCompaniesLoading.value
+                  ? const Center(child: LoadingIndicator())
+                  : controller.filteredCompanies.isEmpty
+                  ? const Center(
+                      child: Text(
+                        "No companies found",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      itemCount: controller.filteredCompanies.length,
+                      itemBuilder: (context, index) {
+                        final company = controller.filteredCompanies[index];
+                        final isSelected =
+                            controller.selectedCompany.value ==
+                            company.companyName;
+
+                        return ListTile(
+                          title: Text(
+                            company.companyName ?? "Unknown Company",
+                            style: context.bodyMediumStyle!.copyWith(
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                          subtitle: Text(
+                            "${controller.getProductsCountForCompany(company.id?.toString() ?? "")} products",
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
+                          trailing: isSelected
+                              ? const Icon(Icons.check, color: Colors.green)
+                              : null,
+                          onTap: () {
+                            // Use company.id (which is 137) instead of company.companyId (which is "01")
+                            // because products have CompanyId: 137 matching company.id
+                            controller.selectCompany(
+                              company.companyName ?? "Unknown Company",
+                              company.id?.toString() ?? "",
+                            );
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -379,7 +548,6 @@ class ProductBottomSheet extends StatelessWidget {
                   labelColor: AppColors.blackTextColor,
                   controller: qtyController,
                   hintText: "Qty",
-
                   keyboardType: TextInputType.phone,
                   borderColor: AppColors.darkGreyColor,
                   labelfontSize: 14,
@@ -392,7 +560,6 @@ class ProductBottomSheet extends StatelessWidget {
                   label: "Bonus",
                   labelColor: AppColors.blackTextColor,
                   hintText: "Bns%",
-
                   keyboardType: TextInputType.phone,
                   borderColor: AppColors.darkGreyColor,
                   labelfontSize: 14,
@@ -437,11 +604,11 @@ class ProductBottomSheet extends StatelessWidget {
               Text.rich(
                 TextSpan(
                   text: "Available Stock: ",
-                  style: TextStyle(color: Colors.grey),
+                  style: const TextStyle(color: Colors.grey),
                   children: [
                     TextSpan(
                       text: "${product.currentStock}",
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.black,
                         fontWeight: FontWeight.bold,
                       ),
@@ -452,11 +619,11 @@ class ProductBottomSheet extends StatelessWidget {
               Text.rich(
                 TextSpan(
                   text: "Trade Price: ",
-                  style: TextStyle(color: Colors.grey),
+                  style: const TextStyle(color: Colors.grey),
                   children: [
                     TextSpan(
                       text: "${product.tradePrice}",
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.black,
                         fontWeight: FontWeight.bold,
                       ),

@@ -3,8 +3,6 @@ import 'package:pharma_app/app/core/utils/apptoast.dart';
 import 'package:pharma_app/app/data/models/get_models/get_customers_model.dart';
 import 'package:pharma_app/app/data/models/get_models/get_sectors_model.dart';
 import 'package:pharma_app/app/data/models/get_models/get_towns_model.dart';
-import 'package:pharma_app/app/repositories/customer_repository/customer_repository.dart';
-import 'package:pharma_app/app/repositories/location_repository/location_repository.dart';
 import 'package:pharma_app/app/routes/app_pages.dart';
 
 /// Controller to manage the selection of Sector → Town → Customer
@@ -50,8 +48,7 @@ class SelectCustomerController extends GetxController {
   Future<void> _fetchSectors() async {
     try {
       isLoadingSectors.value = true;
-      final List<GetSectorsModel> fetchedSectors =
-          await LocationRepository.getAllSectors();
+      final List<GetSectorsModel> fetchedSectors = Get.arguments[2];
 
       _allSectors.clear();
       _allSectors.addAll(fetchedSectors);
@@ -69,8 +66,7 @@ class SelectCustomerController extends GetxController {
   Future<void> _fetchTowns() async {
     try {
       isLoadingTowns.value = true;
-      final List<GetTownsModel> fetchedTowns =
-          await LocationRepository.getAllTowns();
+      final List<GetTownsModel> fetchedTowns = Get.arguments[3];
 
       _allTowns.clear();
       _allTowns.addAll(fetchedTowns);
@@ -88,9 +84,7 @@ class SelectCustomerController extends GetxController {
   Future<void> _fetchCustomers() async {
     try {
       isLoadingCustomers.value = true;
-      final List<GetCustomersModel> fetchedCustomers =
-          await CustomerRepository.getAllCustomers();
-
+      final List<GetCustomersModel> fetchedCustomers = Get.arguments[4];
       _allCustomers.clear();
       _allCustomers.addAll(fetchedCustomers);
     } catch (error) {
@@ -188,6 +182,8 @@ class SelectCustomerController extends GetxController {
           selectedCustomer.value,
           selectedTown.value,
           selectedSector.value,
+          Get.arguments[0],
+          Get.arguments[1],
         ],
       );
     }

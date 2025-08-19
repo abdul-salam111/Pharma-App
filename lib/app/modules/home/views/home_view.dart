@@ -36,7 +36,16 @@ class HomeView extends GetView<HomeController> {
               heightBox(20),
               GestureDetector(
                 onTap: () {
-                  Get.toNamed(Routes.SELECT_CUSTOMER);
+                  Get.toNamed(
+                    Routes.SELECT_CUSTOMER,
+                    arguments: [
+                      controller.getAllProducts,
+                      controller.getCompaniesModel,
+                      controller.getAllSectors,
+                      controller.getAllTowns,
+                      controller.getAllCustomers,
+                    ],
+                  );
                 },
                 child: Container(
                   width: double.infinity,

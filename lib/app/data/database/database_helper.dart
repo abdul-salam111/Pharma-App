@@ -37,36 +37,37 @@ class DatabaseHelper {
   }
 
   Future<void> _onCreate(Database db, int version) async {
+    // Updated schema to match API data structure
     await db.execute('''
       CREATE TABLE companies(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        CompanyId TEXT NOT NULL,
-        CompanyName TEXT NOT NULL,
+        CompanyId TEXT,
+        CompanyName TEXT,
         ASMTitle TEXT,
         DistributionCode TEXT,
-        CompanyRecordID TEXT NOT NULL,
-        TenantID TEXT NOT NULL 
+        CompanyRecordID INTEGER,
+        TenantID INTEGER
       )
     ''');
 
     await db.execute('''
      CREATE TABLE sectors(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ActualSectorId INTEGER NOT NULL,
-    SectorName TEXT NOT NULL,
-    SectorsRecordID INTEGER NOT NULL,
-    TenantID INTEGER NOT NULL
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ActualSectorId INTEGER,
+        SectorName TEXT,
+        SectorsRecordID INTEGER,
+        TenantID INTEGER
      )
     ''');
 
     await db.execute('''
     CREATE TABLE towns(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      ActualSectorId INTEGER NOT NULL,
-      ActualTownId INTEGER NOT NULL,
-      TownName TEXT NOT NULL,
-      TownRecordID INTEGER NOT NULL,
-      TenantID INTEGER NOT NULL
+      ActualSectorId INTEGER,
+      ActualTownId INTEGER,
+      TownName TEXT,
+      TownRecordID INTEGER,
+      TenantID INTEGER
     )
   ''');
 
@@ -76,7 +77,7 @@ class DatabaseHelper {
       CustomerId TEXT,
       ActualTownId INTEGER,
       companyName TEXT,
-      CustomerName TEXT NOT NULL,
+      CustomerName TEXT,
       Address TEXT,
       City TEXT,
       ContactPerson TEXT,
@@ -89,8 +90,8 @@ class DatabaseHelper {
       STN TEXT,
       CustomerType TEXT,
       CNIC TEXT,
-      CustomerRecordID TEXT,
-      TenantID TEXT
+      CustomerRecordID INTEGER,
+      TenantID INTEGER
     )
   ''');
 
@@ -103,10 +104,10 @@ class DatabaseHelper {
       GroupId INTEGER,
       ProductName TEXT,
       Packing TEXT,
-      TradePrice TEXT,
-      SaleDiscRatio TEXT,
+      TradePrice REAL,
+      SaleDiscRatio REAL,
       CurrentStock INTEGER,
-      IsInActive TEXT,
+      IsInActive INTEGER,
       ProductRecordID INTEGER,
       TenantID INTEGER
     )
@@ -121,6 +122,78 @@ class DatabaseHelper {
     }
   }
 
+  // ==================== HELPER METHODS FOR DATA CONVERSION ====================
+
+  Map<String, dynamic> _convertCompanyToDbFormat(GetCompaniesModel company) {
+    return {
+      'CompanyId': company.companyId,
+      'CompanyName': company.companyName,
+      'ASMTitle': company.asmTitle,
+      'DistributionCode': company.distributionCode,
+      'CompanyRecordID': company.id, // Map ID to CompanyRecordID
+      'TenantID': company.tenantId,
+    };
+  }
+
+  Map<String, dynamic> _convertSectorToDbFormat(GetSectorsModel sector) {
+    return {
+      'ActualSectorId': sector.actualSectorId,
+      'SectorName': sector.sectorName,
+      'SectorsRecordID': sector.id, // Map ID to SectorsRecordID
+      'TenantID': sector.tenantId,
+    };
+  }
+
+  Map<String, dynamic> _convertTownToDbFormat(GetTownsModel town) {
+    return {
+      'ActualSectorId': town.actualSectorId,
+      'ActualTownId': town.actualTownId,
+      'TownName': town.townName,
+      'TownRecordID': town.id, // Map ID to TownRecordID
+      'TenantID': town.tenantId,
+    };
+  }
+
+  Map<String, dynamic> _convertCustomerToDbFormat(GetCustomersModel customer) {
+    return {
+      'CustomerId': customer.customerId,
+      'ActualTownId': customer.actualTownId,
+      'companyName': null, // This field doesn't exist in your model
+      'CustomerName': customer.customerName,
+      'Address': customer.address,
+      'City': customer.city,
+      'ContactPerson': customer.contactPerson,
+      'Phone1': customer.phone1,
+      'Phone2': customer.phone2,
+      'Phone3': customer.phone3,
+      'GSM': customer.gsm,
+      'Email': customer.email,
+      'NTN': customer.ntn,
+      'STN': customer.stn,
+      'CustomerType': customer.customerType,
+      'CNIC': customer.cnic,
+      'CustomerRecordID': customer.id, // Map ID to CustomerRecordID
+      'TenantID': customer.tenantId,
+    };
+  }
+
+  Map<String, dynamic> _convertProductToDbFormat(GetAllProductsModel product) {
+    return {
+      'CompanyId': product.companyId,
+      'StrCompanyId': product.strCompanyId,
+      'ProductId': product.productId,
+      'GroupId': product.groupId,
+      'ProductName': product.productName,
+      'Packing': product.packing,
+      'TradePrice': product.tradePrice,
+      'SaleDiscRatio': product.saleDiscRatio,
+      'CurrentStock': product.currentStock,
+      'IsInActive': product.isInActive == true ? 1 : 0, // Convert boolean to integer
+      'ProductRecordID': product.id, // Map ID to ProductRecordID
+      'TenantID': product.tenantId,
+    };
+  }
+
   // ==================== INSERT METHODS ====================
 
   // Insert multiple companies
@@ -131,15 +204,158 @@ class DatabaseHelper {
 
       await dbClient!.transaction((txn) async {
         for (var company in companies) {
-          int result = await txn.insert('companies', company.toJson());
-          results.add(result);
+          try {
+            int result = await txn.insert('companies', _convertCompanyToDbFormat(company));
+            results.add(result);
+          } catch (e) {
+            if (kDebugMode) {
+              print('Error inserting individual company: $e');
+              print('Company data: ${company.toJson()}');
+            }
+          }
         }
       });
+
+      if (kDebugMode) {
+        print('Successfully inserted ${results.length} companies out of ${companies.length}');
+      }
 
       return results;
     } catch (e) {
       if (kDebugMode) {
         print('Error inserting companies: $e');
+      }
+      return [];
+    }
+  }
+
+  // Insert multiple sectors
+  Future<List<int>> insertSectors(List<GetSectorsModel> sectors) async {
+    try {
+      var dbClient = await database;
+      List<int> results = [];
+
+      await dbClient!.transaction((txn) async {
+        for (var sector in sectors) {
+          try {
+            int result = await txn.insert('sectors', _convertSectorToDbFormat(sector));
+            results.add(result);
+          } catch (e) {
+            if (kDebugMode) {
+              print('Error inserting individual sector: $e');
+              print('Sector data: ${sector.toJson()}');
+            }
+          }
+        }
+      });
+
+      if (kDebugMode) {
+        print('Successfully inserted ${results.length} sectors out of ${sectors.length}');
+      }
+
+      return results;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error inserting sectors: $e');
+      }
+      return [];
+    }
+  }
+
+  // Insert multiple towns
+  Future<List<int>> insertTowns(List<GetTownsModel> towns) async {
+    try {
+      var dbClient = await database;
+      List<int> results = [];
+
+      await dbClient!.transaction((txn) async {
+        for (var town in towns) {
+          try {
+            int result = await txn.insert('towns', _convertTownToDbFormat(town));
+            results.add(result);
+          } catch (e) {
+            if (kDebugMode) {
+              print('Error inserting individual town: $e');
+              print('Town data: ${town.toJson()}');
+            }
+          }
+        }
+      });
+
+      if (kDebugMode) {
+        print('Successfully inserted ${results.length} towns out of ${towns.length}');
+      }
+
+      return results;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error inserting towns: $e');
+      }
+      return [];
+    }
+  }
+
+  // Insert multiple customers
+  Future<List<int>> insertCustomers(List<GetCustomersModel> customers) async {
+    try {
+      var dbClient = await database;
+      List<int> results = [];
+
+      await dbClient!.transaction((txn) async {
+        for (var customer in customers) {
+          try {
+            int result = await txn.insert('customers', _convertCustomerToDbFormat(customer));
+            results.add(result);
+          } catch (e) {
+            if (kDebugMode) {
+              print('Error inserting individual customer: $e');
+              print('Customer data: ${customer.toJson()}');
+            }
+          }
+        }
+      });
+
+      if (kDebugMode) {
+        print('Successfully inserted ${results.length} customers out of ${customers.length}');
+      }
+
+      return results;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error inserting customers: $e');
+      }
+      return [];
+    }
+  }
+
+  // Insert multiple products
+  Future<List<int>> insertProducts(List<GetAllProductsModel> products) async {
+    try {
+      var dbClient = await database;
+      List<int> results = [];
+
+      await dbClient!.transaction((txn) async {
+        for (var product in products) {
+          try {
+            int result = await txn.insert('products', _convertProductToDbFormat(product));
+            results.add(result);
+          } catch (e) {
+            if (kDebugMode) {
+              print('Error inserting individual product: $e');
+              print('Product data: ${product.toJson()}');
+            }
+          }
+        }
+      });
+
+      if (kDebugMode) {
+        print('Successfully inserted ${results.length} products out of ${products.length}');
+      }
+
+      return results;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error inserting products: $e');
       }
       return [];
     }
@@ -158,28 +374,6 @@ class DatabaseHelper {
     }
   }
 
-  // Insert multiple sectors
-  Future<List<int>> insertSectors(List<GetSectorsModel> sectors) async {
-    try {
-      var dbClient = await database;
-      List<int> results = [];
-
-      await dbClient!.transaction((txn) async {
-        for (var sector in sectors) {
-          int result = await txn.insert('sectors', sector.toJson());
-          results.add(result);
-        }
-      });
-
-      return results;
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error inserting sectors: $e');
-      }
-      return [];
-    }
-  }
-
   // Insert Sector
   Future<int> insertSector(Map<String, dynamic> sector) async {
     try {
@@ -190,28 +384,6 @@ class DatabaseHelper {
         print('Error inserting sector: $e');
       }
       return -1;
-    }
-  }
-
-  // Insert multiple towns
-  Future<List<int>> insertTowns(List<GetTownsModel> towns) async {
-    try {
-      var dbClient = await database;
-      List<int> results = [];
-
-      await dbClient!.transaction((txn) async {
-        for (var town in towns) {
-          int result = await txn.insert('towns', town.toJson());
-          results.add(result);
-        }
-      });
-
-      return results;
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error inserting towns: $e');
-      }
-      return [];
     }
   }
 
@@ -228,28 +400,6 @@ class DatabaseHelper {
     }
   }
 
-  // Insert multiple customers
-  Future<List<int>> insertCustomers(List<GetCustomersModel> customers) async {
-    try {
-      var dbClient = await database;
-      List<int> results = [];
-
-      await dbClient!.transaction((txn) async {
-        for (var customer in customers) {
-          int result = await txn.insert('customers', customer.toJson());
-          results.add(result);
-        }
-      });
-
-      return results;
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error inserting customers: $e');
-      }
-      return [];
-    }
-  }
-
   // Insert Customer
   Future<int> insertCustomer(Map<String, dynamic> customer) async {
     try {
@@ -260,28 +410,6 @@ class DatabaseHelper {
         print('Error inserting customer: $e');
       }
       return -1;
-    }
-  }
-
-  // Insert multiple products
-  Future<List<int>> insertProducts(List<GetAllProductsModel> products) async {
-    try {
-      var dbClient = await database;
-      List<int> results = [];
-
-      await dbClient!.transaction((txn) async {
-        for (var product in products) {
-          int result = await txn.insert('products', product.toJson());
-          results.add(result);
-        }
-      });
-
-      return results;
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error inserting products: $e');
-      }
-      return [];
     }
   }
 
@@ -306,7 +434,12 @@ class DatabaseHelper {
       var dbClient = await database;
       List<Map<String, dynamic>> maps = await dbClient!.query('sectors');
       
-      return maps.map((map) => GetSectorsModel.fromJson(map)).toList();
+      return maps.map((map) => GetSectorsModel.fromJson({
+        'ActualSectorId': map['ActualSectorId'],
+        'SectorName': map['SectorName'],
+        'ID': map['SectorsRecordID'], // Map back to ID
+        'TenantID': map['TenantID'],
+      })).toList();
     } catch (e) {
       if (kDebugMode) {
         print('Error getting sectors from database: $e');
@@ -321,7 +454,13 @@ class DatabaseHelper {
       var dbClient = await database;
       List<Map<String, dynamic>> maps = await dbClient!.query('towns');
       
-      return maps.map((map) => GetTownsModel.fromJson(map)).toList();
+      return maps.map((map) => GetTownsModel.fromJson({
+        'ActualSectorId': map['ActualSectorId'],
+        'ActualTownId': map['ActualTownId'],
+        'TownName': map['TownName'],
+        'ID': map['TownRecordID'], // Map back to ID
+        'TenantID': map['TenantID'],
+      })).toList();
     } catch (e) {
       if (kDebugMode) {
         print('Error getting towns from database: $e');
@@ -336,7 +475,25 @@ class DatabaseHelper {
       var dbClient = await database;
       List<Map<String, dynamic>> maps = await dbClient!.query('customers');
       
-      return maps.map((map) => GetCustomersModel.fromJson(map)).toList();
+      return maps.map((map) => GetCustomersModel.fromJson({
+        'CustomerId': map['CustomerId'],
+        'ActualTownId': map['ActualTownId'],
+        'CustomerName': map['CustomerName'],
+        'Address': map['Address'],
+        'City': map['City'],
+        'ContactPerson': map['ContactPerson'],
+        'Phone1': map['Phone1'],
+        'Phone2': map['Phone2'],
+        'Phone3': map['Phone3'],
+        'GSM': map['GSM'],
+        'Email': map['Email'],
+        'NTN': map['NTN'],
+        'STN': map['STN'],
+        'CustomerType': map['CustomerType'],
+        'CNIC': map['CNIC'],
+        'ID': map['CustomerRecordID'], // Map back to ID
+        'TenantID': map['TenantID'],
+      })).toList();
     } catch (e) {
       if (kDebugMode) {
         print('Error getting customers from database: $e');
@@ -351,7 +508,14 @@ class DatabaseHelper {
       var dbClient = await database;
       List<Map<String, dynamic>> maps = await dbClient!.query('companies');
       
-      return maps.map((map) => GetCompaniesModel.fromJson(map)).toList();
+      return maps.map((map) => GetCompaniesModel.fromJson({
+        'CompanyId': map['CompanyId'],
+        'CompanyName': map['CompanyName'],
+        'ASMTitle': map['ASMTitle'],
+        'DistributionCode': map['DistributionCode'],
+        'ID': map['CompanyRecordID'], // Map back to ID
+        'TenantID': map['TenantID'],
+      })).toList();
     } catch (e) {
       if (kDebugMode) {
         print('Error getting companies from database: $e');
@@ -366,7 +530,20 @@ class DatabaseHelper {
       var dbClient = await database;
       List<Map<String, dynamic>> maps = await dbClient!.query('products');
       
-      return maps.map((map) => GetAllProductsModel.fromJson(map)).toList();
+      return maps.map((map) => GetAllProductsModel.fromJson({
+        'CompanyId': map['CompanyId'],
+        'StrCompanyId': map['StrCompanyId'],
+        'ProductId': map['ProductId'],
+        'GroupId': map['GroupId'],
+        'ProductName': map['ProductName'],
+        'Packing': map['Packing'],
+        'TradePrice': map['TradePrice'],
+        'SaleDiscRatio': map['SaleDiscRatio'],
+        'CurrentStock': map['CurrentStock'],
+        'IsInActive': map['IsInActive'] == 1, // Convert integer back to boolean
+        'ID': map['ProductRecordID'], // Map back to ID
+        'TenantID': map['TenantID'],
+      })).toList();
     } catch (e) {
       if (kDebugMode) {
         print('Error getting products from database: $e');
@@ -385,7 +562,13 @@ class DatabaseHelper {
         whereArgs: [sectorId],
       );
       
-      return maps.map((map) => GetTownsModel.fromJson(map)).toList();
+      return maps.map((map) => GetTownsModel.fromJson({
+        'ActualSectorId': map['ActualSectorId'],
+        'ActualTownId': map['ActualTownId'],
+        'TownName': map['TownName'],
+        'ID': map['TownRecordID'], // Map back to ID
+        'TenantID': map['TenantID'],
+      })).toList();
     } catch (e) {
       if (kDebugMode) {
         print('Error getting towns by sector ID: $e');
@@ -404,7 +587,25 @@ class DatabaseHelper {
         whereArgs: [townId],
       );
       
-      return maps.map((map) => GetCustomersModel.fromJson(map)).toList();
+      return maps.map((map) => GetCustomersModel.fromJson({
+        'CustomerId': map['CustomerId'],
+        'ActualTownId': map['ActualTownId'],
+        'CustomerName': map['CustomerName'],
+        'Address': map['Address'],
+        'City': map['City'],
+        'ContactPerson': map['ContactPerson'],
+        'Phone1': map['Phone1'],
+        'Phone2': map['Phone2'],
+        'Phone3': map['Phone3'],
+        'GSM': map['GSM'],
+        'Email': map['Email'],
+        'NTN': map['NTN'],
+        'STN': map['STN'],
+        'CustomerType': map['CustomerType'],
+        'CNIC': map['CNIC'],
+        'ID': map['CustomerRecordID'], // Map back to ID
+        'TenantID': map['TenantID'],
+      })).toList();
     } catch (e) {
       if (kDebugMode) {
         print('Error getting customers by town ID: $e');
@@ -545,4 +746,23 @@ class DatabaseHelper {
         print('Error closing database: $e');
       }
     }
-  }}
+  }
+
+  // Method to recreate database (for testing purposes)
+  Future<void> recreateDatabase() async {
+    try {
+      await closeDatabase();
+      io.Directory documentDirectory = await getApplicationDocumentsDirectory();
+      String path = join(documentDirectory.path, "pharmaApp.db");
+      await io.File(path).delete();
+      _db = await initializeDatabase();
+      if (kDebugMode) {
+        print('Database recreated successfully');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error recreating database: $e');
+      }
+    }
+  }
+}
