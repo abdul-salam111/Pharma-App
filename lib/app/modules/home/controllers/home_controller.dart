@@ -12,28 +12,48 @@ import 'package:pharma_app/app/repositories/customer_repository/customer_reposit
 import 'package:pharma_app/app/repositories/location_repository/location_repository.dart';
 import 'package:pharma_app/app/repositories/products_repository/products_repository.dart';
 import 'package:pharma_app/app/routes/app_pages.dart';
+import 'package:pharma_app/app/services/storage.dart';
 
+/// Controller to manage HomeScreen state and data synchronization.
 class HomeController extends GetxController {
-  // Database helper instance
+  // ================= DATABASE =================
   final DatabaseHelper _databaseHelper = DatabaseHelper();
 
-  // Loading states
+  // ================= STATES =================
   RxBool isLoadingData = false.obs;
   RxBool isSyncingData = false.obs;
   late List<CardModel> cardList;
 
-  // Observable lists for data
+  // ================= OBSERVABLE DATA =================
   RxList<GetAllProductsModel> getAllProducts = <GetAllProductsModel>[].obs;
   RxList<GetAllProductsModel> filteredProducts = <GetAllProductsModel>[].obs;
+
   RxList<GetCompaniesModel> getCompaniesModel = <GetCompaniesModel>[].obs;
   RxList<GetCompaniesModel> filteredCompanies = <GetCompaniesModel>[].obs;
+
   RxList<GetSectorsModel> getAllSectors = <GetSectorsModel>[].obs;
   RxList<GetTownsModel> getAllTowns = <GetTownsModel>[].obs;
   RxList<GetCustomersModel> getAllCustomers = <GetCustomersModel>[].obs;
 
+  // ================= LIFECYCLE =================
   @override
-  void onInit() {
+  void onInit() async {
     super.onInit();
+    _setupCards();
+    if (await storage.readValues(StorageKeys.isDatasynced) == null) {
+      syncAllData();
+    }
+    loadLocalData();
+  }
+
+  @override
+  void onClose() {
+    _databaseHelper.closeDatabase(); // close DB on dispose
+    super.onClose();
+  }
+
+  // ================= UI CARDS =================
+  void _setupCards() {
     cardList = [
       CardModel(
         cardColor: const Color(0xffA2CDFF),
@@ -70,12 +90,9 @@ class HomeController extends GetxController {
         textColor: const Color(0xffED1D16),
       ),
     ];
-
-    // Load local data initially
-    loadLocalData();
   }
 
-  // ================ SYNC ALL DATA FROM API AND STORE LOCALLY ================
+  // ================= SYNC METHODS =================
   Future<void> syncAllData() async {
     if (isSyncingData.value) return;
 
@@ -93,139 +110,81 @@ class HomeController extends GetxController {
 
       await loadLocalData();
 
-      // ✅ Close loader before showing success
-      if (Get.isDialogOpen ?? false) {
-        Get.back();
-      }
-
-      AppToasts.showSuccessToast(Get.context!, 'Data synced successfully!');
-      await _databaseHelper.printDatabaseStats();
+      if (Get.isDialogOpen ?? false) Get.back();
+      storage.setValues(StorageKeys.isDatasynced, 'true');
     } catch (error) {
-      // ✅ Close loader on error as well
-      if (Get.isDialogOpen ?? false) {
-        Get.back();
-      }
-
-      AppToasts.showErrorToast(
-        Get.context!,
-        'Sync failed: ${error.toString()}',
-      );
+      if (Get.isDialogOpen ?? false) Get.back();
+      AppToasts.showErrorToast(Get.context!, 'Sync failed: $error');
     } finally {
       isSyncingData.value = false;
     }
   }
 
-  // ================ FETCH AND STORE PRODUCTS ================
   Future<void> _fetchAndStoreProducts() async {
     try {
-      // Fetch from API
       final products = await ProductsRepository.getAllProducts();
-
       if (products.isNotEmpty) {
-        // Clear existing products
         await _databaseHelper.clearProducts();
-
-        // Insert new products
         await _databaseHelper.insertProducts(products);
-
-        print('Stored ${products.length} products locally');
       }
-    } catch (error) {
-      print('Error fetching and storing products: $error');
+    } catch (e) {
       rethrow;
     }
   }
 
-  // ================ FETCH AND STORE COMPANIES ================
   Future<void> _fetchAndStoreCompanies() async {
     try {
-      // Fetch from API
       final companies = await CompaniesRepository.getAllCompanies();
-
       if (companies.isNotEmpty) {
-        // Clear existing companies
         await _databaseHelper.clearCompanies();
-
-        // Insert new companies
         await _databaseHelper.insertCompanies(companies);
-
-        print('Stored ${companies.length} companies locally');
       }
-    } catch (error) {
-      print('Error fetching and storing companies: $error');
+    } catch (e) {
       rethrow;
     }
   }
 
-  // ================ FETCH AND STORE SECTORS ================
   Future<void> _fetchAndStoreSectors() async {
     try {
-      // Fetch from API
       final sectors = await LocationRepository.getAllSectors();
-
       if (sectors.isNotEmpty) {
-        // Clear existing sectors
         await _databaseHelper.clearSectors();
-
-        // Insert new sectors
         await _databaseHelper.insertSectors(sectors);
-
-        print('Stored ${sectors.length} sectors locally');
       }
-    } catch (error) {
-      print('Error fetching and storing sectors: $error');
+    } catch (e) {
       rethrow;
     }
   }
 
-  // ================ FETCH AND STORE TOWNS ================
   Future<void> _fetchAndStoreTowns() async {
     try {
-      // Fetch from API
       final towns = await LocationRepository.getAllTowns();
-
       if (towns.isNotEmpty) {
-        // Clear existing towns
         await _databaseHelper.clearTowns();
-
-        // Insert new towns
         await _databaseHelper.insertTowns(towns);
-
-        print('Stored ${towns.length} towns locally');
       }
-    } catch (error) {
-      print('Error fetching and storing towns: $error');
+    } catch (e) {
       rethrow;
     }
   }
 
-  // ================ FETCH AND STORE CUSTOMERS ================
   Future<void> _fetchAndStoreCustomers() async {
     try {
-      // Fetch from API
       final customers = await CustomerRepository.getAllCustomers();
-
       if (customers.isNotEmpty) {
-        // Clear existing customers
         await _databaseHelper.clearCustomers();
-
-        // Insert new customers
         await _databaseHelper.insertCustomers(customers);
-
-        print('Stored ${customers.length} customers locally');
       }
-    } catch (error) {
-      print('Error fetching and storing customers: $error');
+    } catch (e) {
       rethrow;
     }
   }
 
-  // ================ LOAD DATA FROM LOCAL DATABASE ================
+  // ================= LOCAL DATA =================
   Future<void> loadLocalData() async {
     try {
       isLoadingData.value = true;
 
-      // Load all data from local database concurrently
       final results = await Future.wait([
         _databaseHelper.getAllProducts(),
         _databaseHelper.getAllCompanies(),
@@ -234,122 +193,23 @@ class HomeController extends GetxController {
         _databaseHelper.getAllCustomers(),
       ]);
 
-      // Update observable lists
       getAllProducts.value = results[0] as List<GetAllProductsModel>;
       getCompaniesModel.value = results[1] as List<GetCompaniesModel>;
-
       getAllSectors.value = results[2] as List<GetSectorsModel>;
       getAllTowns.value = results[3] as List<GetTownsModel>;
       getAllCustomers.value = results[4] as List<GetCustomersModel>;
     } catch (error) {
       AppToasts.showErrorToast(
         Get.context!,
-        'Failed to load local data: ${error.toString()}',
+        'Failed to load local data: $error',
       );
     } finally {
       isLoadingData.value = false;
     }
   }
-
-  // ================ SEARCH AND FILTER METHODS ================
-  void filterProducts(String query) {
-    if (query.isEmpty) {
-      filteredProducts.value = List.from(getAllProducts);
-    } else {
-      filteredProducts.value = getAllProducts
-          .where(
-            (product) =>
-                product.productName?.toLowerCase().contains(
-                  query.toLowerCase(),
-                ) ??
-                false,
-          )
-          .toList();
-    }
-  }
-
-  void filterCompanies(String query) {
-    if (query.isEmpty) {
-      filteredCompanies.value = List.from(getCompaniesModel);
-    } else {
-      filteredCompanies.value = getCompaniesModel
-          .where(
-            (company) =>
-                company.companyName?.toLowerCase().contains(
-                  query.toLowerCase(),
-                ) ??
-                false,
-          )
-          .toList();
-    }
-  }
-
-  // ================ GET RELATED DATA METHODS ================
-  Future<List<GetTownsModel>> getTownsBySector(int sectorId) async {
-    try {
-      return await _databaseHelper.getTownsBySectorId(sectorId);
-    } catch (error) {
-      AppToasts.showErrorToast(
-        Get.context!,
-        'Failed to load towns: ${error.toString()}',
-      );
-      return [];
-    }
-  }
-
-  Future<List<GetCustomersModel>> getCustomersByTown(int townId) async {
-    try {
-      return await _databaseHelper.getCustomersByTownId(townId);
-    } catch (error) {
-      AppToasts.showErrorToast(
-        Get.context!,
-        'Failed to load customers: ${error.toString()}',
-      );
-      return [];
-    }
-  }
-
-  // ================ UTILITY METHODS ================
-  Future<void> clearAllLocalData() async {
-    try {
-      await _databaseHelper.clearAllTables();
-
-      // Clear observable lists
-      getAllProducts.clear();
-      filteredProducts.clear();
-      getCompaniesModel.clear();
-      filteredCompanies.clear();
-      getAllSectors.clear();
-      getAllTowns.clear();
-      getAllCustomers.clear();
-
-      AppToasts.showSuccessToast(Get.context!, 'All local data cleared!');
-    } catch (error) {
-      AppToasts.showErrorToast(
-        Get.context!,
-        'Failed to clear data: ${error.toString()}',
-      );
-    }
-  }
-
-  Future<Map<String, int>> getDatabaseStats() async {
-    return {
-      'sectors': await _databaseHelper.getTableCount('sectors'),
-      'towns': await _databaseHelper.getTableCount('towns'),
-      'customers': await _databaseHelper.getTableCount('customers'),
-      'companies': await _databaseHelper.getTableCount('companies'),
-      'products': await _databaseHelper.getTableCount('products'),
-    };
-  }
-
-  @override
-  void onClose() {
-    // Close database connection when controller is disposed
-    _databaseHelper.closeDatabase();
-    super.onClose();
-  }
 }
 
+/// UI Card model for HomeScreen features.
 class CardModel {
   final Color cardColor;
   final String cardIcon;

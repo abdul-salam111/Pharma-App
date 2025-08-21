@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:pharma_app/app/core/utils/apptoast.dart';
 import 'package:pharma_app/app/data/models/get_models/get_all_products_model.dart';
 import 'package:pharma_app/app/data/models/get_models/get_companies_model.dart';
+import 'package:pharma_app/app/data/models/get_models/get_customers_model.dart';
 
 class AllProductsController extends GetxController {
   // ================ Text Controllers & Focus Nodes ================
@@ -14,7 +15,6 @@ class AllProductsController extends GetxController {
   // ================ Observable Variables ================
   var isLoading = false.obs;
   var isCompaniesLoading = false.obs;
-
   // Products
   RxList<GetAllProductsModel> getAllProducts = <GetAllProductsModel>[].obs;
   RxList<GetAllProductsModel> filteredProducts = <GetAllProductsModel>[].obs;
@@ -180,5 +180,146 @@ class AllProductsController extends GetxController {
     return getAllProducts.where((product) {
       return product.companyId.toString() == companyId;
     }).length;
+  }
+}
+
+class OrderItems {
+  final GetCustomersModel customer;
+  final List<OrderCompanies> companies;
+  final DateTime orderDate;
+  final DateTime? syncDate;
+  final String? syncedStatus;
+  final double totalAmount;
+  final int totalItems;
+
+  OrderItems({
+    required this.customer,
+    required this.companies,
+    required this.orderDate,
+    this.syncDate,
+    this.syncedStatus,
+    required this.totalAmount,
+    required this.totalItems,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'customerId': customer.customerId,
+      'orderDate': orderDate.toIso8601String(),
+      'syncDate': syncDate?.toIso8601String(),
+      'syncedStatus': syncedStatus,
+      'totalAmount': totalAmount,
+      'totalItems': totalItems,
+    };
+  }
+
+  factory OrderItems.fromMap(
+    Map<String, dynamic> map,
+    GetCustomersModel customer,
+    List<OrderCompanies> companies,
+  ) {
+    return OrderItems(
+      customer: customer,
+      companies: companies,
+      orderDate: DateTime.parse(map['orderDate']),
+      syncDate: map['syncDate'] != null
+          ? DateTime.parse(map['syncDate'])
+          : null,
+      syncedStatus: map['syncedStatus'],
+      totalAmount: map['totalAmount'],
+      totalItems: map['totalItems'],
+    );
+  }
+}
+
+class OrderCompanies {
+  final int companyOrderId; // local PK
+  final int orderId; // FK to OrderItems
+  final GetCompaniesModel company;
+  final List<OrderProducts> products;
+  final double companyTotalAmount;
+  final int companyTotalItems;
+
+  OrderCompanies({
+    required this.companyOrderId,
+    required this.orderId,
+    required this.company,
+    required this.products,
+    required this.companyTotalAmount,
+    required this.companyTotalItems,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'companyOrderId': companyOrderId,
+      'orderId': orderId,
+      'companyId': company.companyId, // assuming field exists
+      'companyTotalAmount': companyTotalAmount,
+      'companyTotalItems': companyTotalItems,
+      // products will be saved in OrderProducts table
+    };
+  }
+
+  factory OrderCompanies.fromMap(
+    Map<String, dynamic> map,
+    GetCompaniesModel company,
+    List<OrderProducts> products,
+  ) {
+    return OrderCompanies(
+      companyOrderId: map['companyOrderId'],
+      orderId: map['orderId'],
+      company: company,
+      products: products,
+      companyTotalAmount: map['companyTotalAmount'],
+      companyTotalItems: map['companyTotalItems'],
+    );
+  }
+}
+
+class OrderProducts {
+  final int orderProductId; // local PK
+  final int companyOrderId; // FK to OrderCompanies
+  final String productId;
+  final String productName;
+  final int qty;
+  final int bns;
+  final double discRatio;
+  final double price;
+
+  OrderProducts({
+    required this.orderProductId,
+    required this.companyOrderId,
+    required this.productId,
+    required this.productName,
+    required this.qty,
+    required this.bns,
+    required this.discRatio,
+    required this.price,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'orderProductId': orderProductId,
+      'companyOrderId': companyOrderId,
+      'productId': productId,
+      'productName': productName,
+      'qty': qty,
+      'bns': bns,
+      'discRatio': discRatio,
+      'price': price,
+    };
+  }
+
+  factory OrderProducts.fromMap(Map<String, dynamic> map) {
+    return OrderProducts(
+      orderProductId: map['orderProductId'],
+      companyOrderId: map['companyOrderId'],
+      productId: map['productId'],
+      productName: map['productName'],
+      qty: map['qty'],
+      bns: map['bns'],
+      discRatio: map['discRatio'],
+      price: map['price'],
+    );
   }
 }
