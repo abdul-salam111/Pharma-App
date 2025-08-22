@@ -1,0 +1,72 @@
+[
+  {
+    "CompanyId": 1,
+    "StrCompanyId": "01",
+    "ProductId": "P001",
+    "GroupId": 101,
+    "ProductName": "Paracetamol 500mg",
+    "Packing": "Box of 10 Tablets",
+    "TradePrice": 120.50,
+    "SaleDiscRatio": 5.0,
+    "CurrentStock": 250,
+    "IsInActive": false,
+    "ID": 1,
+    "TenantID": 2
+  },
+  {
+    "CompanyId": 1,
+    "StrCompanyId": "01",
+    "ProductId": "P002",
+    "GroupId": 101,
+    "ProductName": "Amoxicillin 250mg",
+    "Packing": "Bottle of 60 Capsules",
+    "TradePrice": 450.00,
+    "SaleDiscRatio": 10.0,
+    "CurrentStock": 120,
+    "IsInActive": false,
+    "ID": 2,
+    "TenantID": 2
+  },
+  {
+    "CompanyId": 2,
+    "StrCompanyId": "02",
+    "ProductId": "P003",
+    "GroupId": 102,
+    "ProductName": "Cough Syrup",
+    "Packing": "100ml Bottle",
+    "TradePrice": 95.75,
+    "SaleDiscRatio": 3.0,
+    "CurrentStock": 300,
+    "IsInActive": false,
+    "ID": 3,
+    "TenantID": 2
+  },
+  {
+    "CompanyId": 3,
+    "StrCompanyId": "03",
+    "ProductId": "P004",
+    "GroupId": 103,
+    "ProductName": "Vitamin C 500mg",
+    "Packing": "Box of 20 Tablets",
+    "TradePrice": 210.00,
+    "SaleDiscRatio": 7.5,
+    "CurrentStock": 150,
+    "IsInActive": false,
+    "ID": 4,
+    "TenantID": 2
+  },
+  {
+    "CompanyId": 3,
+    "StrCompanyId": "03",
+    "ProductId": "P005",
+    "GroupId": 103,
+    "ProductName": "Ibuprofen 400mg",
+    "Packing": "Box of 12 Tablets",
+    "TradePrice": 180.25,
+    "SaleDiscRatio": 6.0,
+    "CurrentStock": 90,
+    "IsInActive": false,
+    "ID": 5,
+    "TenantID": 2
+  }
+]

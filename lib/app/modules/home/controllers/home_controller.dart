@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pharma_app/app/core/utils/apptoast.dart';
 import 'package:pharma_app/app/data/database/database_helper.dart';
@@ -120,65 +123,135 @@ class HomeController extends GetxController {
     }
   }
 
-  Future<void> _fetchAndStoreProducts() async {
-    try {
-      final products = await ProductsRepository.getAllProducts();
-      if (products.isNotEmpty) {
-        await _databaseHelper.clearProducts();
-        await _databaseHelper.insertProducts(products);
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
+ Future<void> _fetchAndStoreProducts({bool fromApi = false}) async {
+  try {
+    List<GetAllProductsModel> products = [];
 
-  Future<void> _fetchAndStoreCompanies() async {
-    try {
-      final companies = await CompaniesRepository.getAllCompanies();
-      if (companies.isNotEmpty) {
-        await _databaseHelper.clearCompanies();
-        await _databaseHelper.insertCompanies(companies);
-      }
-    } catch (e) {
-      rethrow;
+    if (fromApi) {
+      // ✅ Load from API
+      products = await ProductsRepository.getAllProducts();
+    } else {
+      // ✅ Load from local JSON
+      final String response = await rootBundle.loadString('assets/products.json');
+      final List<dynamic> data = json.decode(response);
+      products = data.map((e) => GetAllProductsModel.fromJson(e)).toList();
     }
-  }
 
-  Future<void> _fetchAndStoreSectors() async {
-    try {
-      final sectors = await LocationRepository.getAllSectors();
-      if (sectors.isNotEmpty) {
-        await _databaseHelper.clearSectors();
-        await _databaseHelper.insertSectors(sectors);
-      }
-    } catch (e) {
-      rethrow;
+    if (products.isNotEmpty) {
+      await _databaseHelper.clearProducts();
+      await _databaseHelper.insertProducts(products);
     }
+  } catch (e) {
+    rethrow;
   }
+}
 
-  Future<void> _fetchAndStoreTowns() async {
-    try {
-      final towns = await LocationRepository.getAllTowns();
-      if (towns.isNotEmpty) {
-        await _databaseHelper.clearTowns();
-        await _databaseHelper.insertTowns(towns);
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
+Future<void> _fetchAndStoreCompanies({bool fromApi = false}) async {
+  try {
+    List<GetCompaniesModel> companies = [];
 
-  Future<void> _fetchAndStoreCustomers() async {
-    try {
-      final customers = await CustomerRepository.getAllCustomers();
-      if (customers.isNotEmpty) {
-        await _databaseHelper.clearCustomers();
-        await _databaseHelper.insertCustomers(customers);
-      }
-    } catch (e) {
-      rethrow;
+    if (fromApi) {
+      // Fetch from API
+      companies = await CompaniesRepository.getAllCompanies();
+    } else {
+      // Fetch from local JSON
+      final String response = await rootBundle.loadString('assets/companies.json');
+      final List<dynamic> jsonList = json.decode(response);
+      companies = jsonList.map((e) => GetCompaniesModel.fromJson(e)).toList();
     }
+
+    if (companies.isNotEmpty) {
+      await _databaseHelper.clearCompanies();
+      await _databaseHelper.insertCompanies(companies);
+    }
+  } catch (e) {
+    rethrow;
   }
+}
+
+
+  Future<void> _fetchAndStoreSectors({bool fromApi = false}) async {
+  try {
+    List<GetSectorsModel> sectors = [];
+
+    if (fromApi) {
+      // Fetch from API
+      sectors = await LocationRepository.getAllSectors();
+    } else {
+      // Fetch from local JSON file
+      final String response = await rootBundle.loadString('assets/locations.json');
+      final Map<String, dynamic> jsonData = json.decode(response);
+
+      // Extract only the "sectors" part
+      final List<dynamic> jsonList = jsonData['sectors'] ?? [];
+      sectors = jsonList.map((e) => GetSectorsModel.fromJson(e)).toList();
+    }
+
+    if (sectors.isNotEmpty) {
+      await _databaseHelper.clearSectors();
+      await _databaseHelper.insertSectors(sectors);
+    }
+  } catch (e) {
+    rethrow;
+  }
+}
+
+Future<void> _fetchAndStoreTowns({bool fromApi = false}) async {
+  try {
+    List<GetTownsModel> towns = [];
+
+    if (fromApi) {
+      // Fetch from API
+      towns = await LocationRepository.getAllTowns();
+    } else {
+      // Fetch from local JSON file
+      final String response = await rootBundle.loadString('assets/locations.json');
+      final Map<String, dynamic> jsonData = json.decode(response);
+
+      // Extract only the "towns" part
+      final List<dynamic> jsonList = jsonData['towns'] ?? [];
+      towns = jsonList.map((e) => GetTownsModel.fromJson(e)).toList();
+    }
+
+    if (towns.isNotEmpty) {
+      await _databaseHelper.clearTowns();
+      await _databaseHelper.insertTowns(towns);
+    }
+  } catch (e) {
+    rethrow;
+  }
+}
+
+
+ Future<void> _fetchAndStoreCustomers({bool fromApi = false}) async {
+  try {
+    List<GetCustomersModel> customers = [];
+
+    if (fromApi) {
+      // Fetch customers from API
+      customers = await CustomerRepository.getAllCustomers();
+    } else {
+      // Fetch customers from local JSON file
+      final String response =
+          await rootBundle.loadString('assets/locations.json');
+      final data = json.decode(response);
+
+      if (data['customers'] != null) {
+        customers = (data['customers'] as List)
+            .map((e) => GetCustomersModel.fromJson(e))
+            .toList();
+      }
+    }
+
+    if (customers.isNotEmpty) {
+      await _databaseHelper.clearCustomers();
+      await _databaseHelper.insertCustomers(customers);
+    }
+  } catch (e) {
+    rethrow;
+  }
+}
+
 
   // ================= LOCAL DATA =================
   Future<void> loadLocalData() async {

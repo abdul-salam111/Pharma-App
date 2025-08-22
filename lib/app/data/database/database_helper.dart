@@ -6,6 +6,7 @@ import 'package:pharma_app/app/data/models/get_models/get_companies_model.dart';
 import 'package:pharma_app/app/data/models/get_models/get_customers_model.dart';
 import 'package:pharma_app/app/data/models/get_models/get_sectors_model.dart';
 import 'package:pharma_app/app/data/models/get_models/get_towns_model.dart';
+import 'package:pharma_app/app/data/models/post_models/create_order_for_local.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io' as io;
@@ -112,12 +113,213 @@ class DatabaseHelper {
       TenantID INTEGER
     )
   ''');
+    await db.execute('''
+    CREATE TABLE orders(
+      orderId INTEGER PRIMARY KEY AUTOINCREMENT,
+      customerId TEXT,
+      customerName TEXT,
+      orderDate TEXT,
+      syncDate TEXT,
+      synced TEXT DEFAULT 'No',
+      grandTotalProducts INTEGER DEFAULT 0,
+      grandTotalAmount REAL DEFAULT 0
+    )
+  ''');
+
+    await db.execute('''
+    CREATE TABLE order_companies(
+      companyOrderId INTEGER PRIMARY KEY AUTOINCREMENT,
+      orderId INTEGER,
+      companyId TEXT,
+      companyName TEXT,
+      totalCompanyProducts INTEGER DEFAULT 0,
+      totalCompanyAmount REAL DEFAULT 0,
+      FOREIGN KEY (orderId) REFERENCES orders(orderId) ON DELETE CASCADE
+    )
+  ''');
+    await db.execute('''
+    CREATE TABLE order_products(
+      orderProductId INTEGER PRIMARY KEY AUTOINCREMENT,
+      companyOrderId INTEGER,
+      productId TEXT,
+      productName TEXT,
+      quantity INTEGER,
+      bonus INTEGER DEFAULT 0,
+      discRatio REAL DEFAULT 0,
+      price REAL,
+      FOREIGN KEY (companyOrderId) REFERENCES order_companies(companyOrderId) ON DELETE CASCADE
+    )
+  ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < newVersion) {
       if (kDebugMode) {
         print("Database upgraded from $oldVersion to $newVersion");
+      }
+    }
+  }
+
+  // Order operations
+  Future<int> insertOrder(OrderItems order) async {
+    
+    try {
+    
+      var dbClient = await database;
+
+      // Insert order
+      int orderId = await dbClient!.insert('orders', order.toMap());
+
+      // Insert companies and products
+      for (var company in order.companies) {
+        // Create company map without companyOrderId to let SQLite auto-increment
+        final companyMap = {
+          'orderId': orderId,
+          'companyId': company.companyId,
+          'companyName': company.companyName,
+          'totalCompanyProducts': company.companyTotalItems,
+          'totalCompanyAmount': company.companyTotalAmount,
+        };
+
+        int companyOrderId = await dbClient.insert(
+          'order_companies',
+          companyMap,
+        );
+
+        for (var product in company.products) {
+          // Create product map without orderProductId to let SQLite auto-increment
+          final productMap = {
+            'companyOrderId': companyOrderId,
+            'productId': product.productId,
+            'productName': product.productName,
+            'quantity': product.quantity,
+            'bonus': product.bonus,
+            'discRatio': product.discRatio,
+            'price': product.price,
+          };
+
+          await dbClient.insert('order_products', productMap);
+        }
+      }
+
+      return orderId;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error inserting order: $e');
+      }
+      return -1;
+    }
+  }
+
+  Future<List<OrderItems>> getAllOrders() async {
+    try {
+      var dbClient = await database;
+
+      // Get all orders
+      List<Map<String, dynamic>> orderMaps = await dbClient!.query('orders');
+      List<OrderItems> orders = [];
+
+      for (var orderMap in orderMaps) {
+        OrderItems order = OrderItems.fromMap(orderMap);
+
+        // Get companies for this order
+        List<Map<String, dynamic>> companyMaps = await dbClient.query(
+          'order_companies',
+          where: 'orderId = ?',
+          whereArgs: [order.orderId],
+        );
+
+        List<OrderCompanies> companies = [];
+        for (var companyMap in companyMaps) {
+          OrderCompanies company = OrderCompanies.fromMap(companyMap);
+
+          // Get products for this company
+          List<Map<String, dynamic>> productMaps = await dbClient.query(
+            'order_products',
+            where: 'companyOrderId = ?',
+            whereArgs: [company.companyOrderId],
+          );
+
+          company = company.copyWith(
+            products: productMaps
+                .map((map) => OrderProducts.fromMap(map))
+                .toList(),
+          );
+
+          companies.add(company);
+        }
+
+        // Use copyWith to add companies
+        order = order.copyWith(companies: companies);
+
+        orders.add(order);
+      }
+
+      return orders;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting orders: $e');
+      }
+      return [];
+    }
+  }
+
+  Future<void> updateOrder(OrderItems order) async {
+    try {
+      var dbClient = await database;
+
+      // Update order
+      await dbClient!.update(
+        'orders',
+        order.toMap(),
+        where: 'orderId = ?',
+        whereArgs: [order.orderId],
+      );
+
+      // Delete existing companies and products
+      await dbClient.delete(
+        'order_companies',
+        where: 'orderId = ?',
+        whereArgs: [order.orderId],
+      );
+
+      // Insert updated companies and products
+      for (var company in order.companies) {
+        // create updated company with orderId set
+        final updatedCompany = company.copyWith(orderId: order.orderId);
+
+        int companyOrderId = await dbClient.insert(
+          'order_companies',
+          updatedCompany.toMap(),
+        );
+
+        for (var product in updatedCompany.products) {
+          // create updated product with companyOrderId set
+          final updatedProduct = product.copyWith(
+            companyOrderId: companyOrderId,
+          );
+
+          await dbClient.insert('order_products', updatedProduct.toMap());
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error updating order: $e');
+      }
+    }
+  }
+
+  Future<void> deleteOrder(int orderId) async {
+    try {
+      var dbClient = await database;
+      await dbClient!.delete(
+        'orders',
+        where: 'orderId = ?',
+        whereArgs: [orderId],
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error deleting order: $e');
       }
     }
   }

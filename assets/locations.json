@@ -1,0 +1,138 @@
+{
+  "sectors": [
+    {
+      "ActualSectorId": 1,
+      "SectorName": "Punjab",
+      "ID": 1,
+      "TenantID": 2
+    },
+    {
+      "ActualSectorId": 2,
+      "SectorName": "Sindh",
+      "ID": 2,
+      "TenantID": 2
+    },
+    {
+      "ActualSectorId": 3,
+      "SectorName": "KPK",
+      "ID": 3,
+      "TenantID": 2
+    },
+    {
+      "ActualSectorId": 4,
+      "SectorName": "Balochistan",
+      "ID": 4,
+      "TenantID": 2
+    }
+  ],
+  "towns": [
+    {
+      "ActualSectorId": 1,
+      "ActualTownId": 1,
+      "TownName": "Johar Town",
+      "ID": 201,
+      "TenantID": 2
+    },
+    {
+      "ActualSectorId": 1,
+      "ActualTownId": 2,
+      "TownName": "Wapda Town",
+      "ID": 202,
+      "TenantID": 2
+    },
+    {
+      "ActualSectorId": 1,
+      "ActualTownId": 3,
+      "TownName": "Ali Town",
+      "ID": 203,
+      "TenantID": 2
+    },
+    {
+      "ActualSectorId": 2,
+      "ActualTownId": 4,
+      "TownName": "Clifton",
+      "ID": 204,
+      "TenantID": 2
+    },
+    {
+      "ActualSectorId": 2,
+      "ActualTownId": 5,
+      "TownName": "Gulshan-e-Iqbal",
+      "ID": 205,
+      "TenantID": 2
+    },
+    {
+      "ActualSectorId": 3,
+      "ActualTownId": 6,
+      "TownName": "Hayatabad",
+      "ID": 206,
+      "TenantID": 2
+    },
+    {
+      "ActualSectorId": 4,
+      "ActualTownId": 7,
+      "TownName": "Quetta City",
+      "ID": 207,
+      "TenantID": 2
+    }
+  ],
+  "customers": [
+    {
+      "CustomerId": "62001",
+      "ActualTownId": 1,
+      "CustomerName": "Alpha Traders",
+      "Address": "Main Bazar",
+      "City": "Lahore",
+      "ContactPerson": "Mr. Ali",
+      "Phone1": "03001234567",
+      "Phone2": "",
+      "Phone3": "",
+      "GSM": "",
+      "Email": "alpha@example.com",
+      "NTN": "1234567",
+      "STN": "ST1234",
+      "CustomerType": "Retailer",
+      "CNIC": "35202-1234567-1",
+      "ID": 1,
+      "TenantID": 2
+    },
+    {
+      "CustomerId": "62002",
+      "ActualTownId": 2,
+      "CustomerName": "Beta Store",
+      "Address": "Market Road",
+      "City": "Karachi",
+      "ContactPerson": "Mr. Ahmed",
+      "Phone1": "03111234567",
+      "Phone2": "",
+      "Phone3": "",
+      "GSM": "",
+      "Email": "beta@example.com",
+      "NTN": "9876543",
+      "STN": "ST5678",
+      "CustomerType": "Wholesaler",
+      "CNIC": "42101-7654321-0",
+      "ID": 2,
+      "TenantID": 2
+    },
+    {
+      "CustomerId": "62003",
+      "ActualTownId": 3,
+      "CustomerName": "Gamma Supplies",
+      "Address": "Industrial Area",
+      "City": "Islamabad",
+      "ContactPerson": "Mr. Khan",
+      "Phone1": "03221234567",
+      "Phone2": "",
+      "Phone3": "",
+      "GSM": "",
+      "Email": "gamma@example.com",
+      "NTN": "1122334",
+      "STN": "ST91011",
+      "CustomerType": "Distributor",
+      "CNIC": "61101-9876543-9",
+      "ID": 3,
+      "TenantID": 2
+    }
+  ]
+}

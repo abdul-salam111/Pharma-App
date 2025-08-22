@@ -1,18 +1,17 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
-
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:pharma_app/app/core/core.dart';
 import 'package:pharma_app/app/modules/widgets/custom_button.dart';
 import 'package:pharma_app/app/modules/widgets/custom_searchfield.dart';
-import 'package:pharma_app/app/routes/app_pages.dart';
 
 import '../controllers/create_order_controller.dart';
 
 class CreateOrderView extends GetView<CreateOrderController> {
   const CreateOrderView({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -26,10 +25,10 @@ class CreateOrderView extends GetView<CreateOrderController> {
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Row(
-                mainAxisAlignment: mainAxisSpaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Column(
-                    crossAxisAlignment: crossAxisStart,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         "Order Items",
@@ -38,8 +37,7 @@ class CreateOrderView extends GetView<CreateOrderController> {
                         ),
                       ),
                       heightBox(5),
-
-                       Text(
+                      Text(
                         "Order Amount",
                         style: context.bodySmallStyle!.copyWith(
                           color: Colors.white,
@@ -47,39 +45,48 @@ class CreateOrderView extends GetView<CreateOrderController> {
                       ),
                     ],
                   ),
-                   Column(
-                    crossAxisAlignment: crossAxisCenter,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(
-                        "12",
-                        style: context.bodySmallStyle!.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold
+                      Obx(
+                        () => Text(
+                          "${controller.selectedProducts.length}", // Show count of distinct products
+                          style: context.bodySmallStyle!.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       heightBox(5),
-                       Text(
-                        "34,3545",
-                        style: context.bodySmallStyle!.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold
-
+                      Obx(
+                        () => Text(
+                          controller.totalAmount.value.toStringAsFixed(0),
+                          style: context.bodySmallStyle!.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                     SizedBox(
-                width: 80,
-                child: CustomButton(
-                  backgroundColor: AppColors.appLightThemeBackground,
-                  text: "Save",
-                  fontsize: 14,
-                  onPressed: () {
-                    Get.toNamed(Routes.CREATE_ORDER);
-                  },
-                  textColor: AppColors.blackTextColor,
-                ),
-              ),
+                  // In your CreateOrderView, update the Save button
+                  Obx(
+                    () => controller.isSaving.value
+                        ? const CircularProgressIndicator()
+                        : SizedBox(
+                            width: 80,
+                            child: CustomButton(
+                              backgroundColor:
+                                  AppColors.appLightThemeBackground,
+                              text: "Save",
+                              fontsize: 14,
+                              onPressed: () {
+                                controller.getAllOrders();
+                              },
+                              textColor: AppColors.blackTextColor,
+                            ),
+                          ),
+                  ),
                 ],
               ),
             ),
@@ -93,7 +100,9 @@ class CreateOrderView extends GetView<CreateOrderController> {
                   radius: 0,
                   text: "Add Products",
                   fontsize: 14,
-                  onPressed: () {},
+                  onPressed: () {
+                    controller.addMoreProducts();
+                  },
                   backgroundColor: Colors.green,
                 ),
               ),
@@ -104,8 +113,9 @@ class CreateOrderView extends GetView<CreateOrderController> {
                   radius: 0,
                   text: "Close",
                   fontsize: 14,
-
-                  onPressed: () {},
+                  onPressed: () {
+                    controller.closeOrder();
+                  },
                   backgroundColor: Colors.red,
                 ),
               ),
@@ -117,13 +127,13 @@ class CreateOrderView extends GetView<CreateOrderController> {
         title: Column(
           children: [
             Text(
-              'IQBAL M/S',
+              '${controller.selectedCustomer.value!.customerName}',
               style: context.bodyMediumStyle!.copyWith(
                 color: AppColors.whiteTextColor,
               ),
             ),
             Text(
-              'Bahawal Nagar - Bahawl Nagar City',
+              '${controller.selectedSector.value?.sectorName} - ${controller.selectedTown.value?.townName}',
               style: context.displayLargeStyle!.copyWith(
                 color: AppColors.whiteTextColor,
               ),
@@ -141,85 +151,120 @@ class CreateOrderView extends GetView<CreateOrderController> {
               controller: controller.searchController,
               focusNode: controller.searchFocusNode,
               hintText: "Search companies...",
-              onChanged: (query) {},
+              onChanged: (query) {
+                controller.filterCompanies();
+              },
             ),
-            Expanded(
-              child: ListView.separated(
-                itemBuilder: (context, index) {
-                  return InkWell(
-                    onTap: () {
-                      Get.toNamed(Routes.ALL_PRODUCTS);
-                    },
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: crossAxisStart,
-                            children: [
-                              Text(
-                                "Company $index",
-                                style: context.bodyMediumStyle,
-                              ),
-                            ],
-                          ),
+            heightBox(10),
+            Obx(
+              () => controller.isLoading.value
+                  ? const Center(child: CircularProgressIndicator())
+                  : controller.filteredCompanies.isEmpty
+                  ? const Expanded(
+                      child: Center(
+                        child: Text(
+                          "No companies found with orders",
+                          style: TextStyle(color: Colors.grey, fontSize: 16),
                         ),
+                      ),
+                    )
+                  : Expanded(
+                      child: ListView.separated(
+                        itemBuilder: (context, index) {
+                          final company = controller.filteredCompanies[index];
+                          final companyId = company.id.toString();
+                          final companyName =
+                              company.companyName ?? 'Unknown Company';
 
-                        Column(
-                          children: [
-                            Text(
-                              "Items",
-                              style: context.bodySmallStyle!.copyWith(
-                                color: AppColors.greyTextColor,
-                              ),
-                            ),
-                            Text(
-                              "12",
-                              style: context.bodySmallStyle!.copyWith(
-                                color: AppColors.blackTextColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                        widthBox(20),
-                        Column(
-                          children: [
-                            Text(
-                              "Amount",
-                              style: context.bodySmallStyle!.copyWith(
-                                color: AppColors.greyTextColor,
-                              ),
-                            ),
-                            Text(
-                              "12,564",
-                              style: context.bodySmallStyle!.copyWith(
-                                color: AppColors.blackTextColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: BoxConstraints(),
+                          final totalAmount = controller.getCompanyTotal(
+                            companyId,
+                          );
 
-                          icon: Icon(
-                            Iconsax.arrow_right_3,
-                            color: AppColors.appPrimaryColor,
-                            size: 15,
-                          ),
-                          onPressed: () {
-                            Get.toNamed(Routes.CREATE_ORDER);
-                          },
+                          return InkWell(
+                            onTap: () {
+                              // Navigate to company products detail or back to all products with filter
+                              controller.goToAllProducts(companyId);
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          companyName,
+                                          style: context.bodyMediumStyle!
+                                              .copyWith(
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Column(
+                                    children: [
+                                      Text(
+                                        "Items",
+                                        style: context.bodySmallStyle!.copyWith(
+                                          color: AppColors.greyTextColor,
+                                        ),
+                                      ),
+                                      Text(
+                                        "${controller.getCompanyProducts(companyId).length}",
+                                        style: context.bodySmallStyle!.copyWith(
+                                          color: AppColors.blackTextColor,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  widthBox(20),
+                                  Column(
+                                    children: [
+                                      Text(
+                                        "Amount",
+                                        style: context.bodySmallStyle!.copyWith(
+                                          color: AppColors.greyTextColor,
+                                        ),
+                                      ),
+                                      Text(
+                                        totalAmount.toStringAsFixed(0),
+                                        style: context.bodySmallStyle!.copyWith(
+                                          color: AppColors.blackTextColor,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    icon: const Icon(
+                                      Iconsax.arrow_right_3,
+                                      size: 15,
+                                    ),
+                                    onPressed: () {
+                                      controller.goToAllProducts(companyId);
+                                    },
+                                    color: AppColors.appPrimaryColor,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                        separatorBuilder: (context, index) => Divider(
+                          color: AppColors.greyColor.withOpacity(0.3),
+                          height: 10,
                         ),
-                      ],
+                        itemCount: controller.filteredCompanies.length,
+                      ),
                     ),
-                  );
-                },
-                separatorBuilder: (context, index) => Divider(
-                  color: AppColors.greyColor.withOpacity(0.3),
-                  height: 10,
-                ),
-                itemCount: 12,
-              ),
             ),
           ],
         ),

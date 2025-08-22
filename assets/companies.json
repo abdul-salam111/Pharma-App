@@ -1,0 +1,34 @@
+[
+  {
+    "CompanyId": "01",
+    "CompanyName": "Akram Pharma",
+    "ASMTitle": "Regional Manager Lahore",
+    "DistributionCode": "D001",
+    "ID": 1,
+    "TenantID": 2
+  },
+  {
+    "CompanyId": "02",
+    "CompanyName": "Pakistan Pharma",
+    "ASMTitle": "Regional Manager Karachi",
+    "DistributionCode": "D002",
+    "ID": 2,
+    "TenantID": 2
+  },
+  {
+    "CompanyId": "03",
+    "CompanyName": "Medicure Pharma",
+    "ASMTitle": "Regional Manager Peshawar",
+    "DistributionCode": "D003",
+    "ID": 3,
+    "TenantID": 2
+  },
+  {
+    "CompanyId": "04",
+    "CompanyName": "Sehat Pharma",
+    "ASMTitle": "Regional Manager Islamabad",
+    "DistributionCode": "D004",
+    "ID": 4,
+    "TenantID": 2
+  }
+]

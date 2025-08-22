@@ -1,0 +1,16 @@
+{
+    "salesman": [
+        {
+            "SalesmanId": "63001",
+            "SalesmanName": "Abdul SAlam",
+            "City": "Lahore",
+            "MobileNumber": "03216326263",
+            "Password": "1234",
+            "AllowChangePrice": true,
+            "AllowChangeDiscount": true,
+            "AllowChangeBonus": true,
+            "ID": 1,
+            "TenantID": 2
+        }
+    ]
+}

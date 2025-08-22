@@ -2,7 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pharma_app/app/core/core.dart';
+import 'package:pharma_app/app/core/utils/apptoast.dart';
 import 'package:pharma_app/app/data/models/get_models/get_all_products_model.dart';
+import 'package:pharma_app/app/data/models/post_models/create_order_for_local.dart';
 import 'package:pharma_app/app/modules/widgets/custom_button.dart';
 import 'package:pharma_app/app/modules/widgets/custom_textfield.dart';
 import 'package:pharma_app/app/modules/widgets/loading_indicator.dart';
@@ -108,7 +110,7 @@ class AllProductsView extends GetView<AllProductsController> {
                   ),
                   Obx(
                     () => Text(
-                      "${controller.companyTotalItems.value}",
+                      "${controller.totalItems.value}",
                       style: context.bodySmallStyle!.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -124,7 +126,28 @@ class AllProductsView extends GetView<AllProductsController> {
                   text: "Finalize",
                   fontsize: 14,
                   onPressed: () {
-                    Get.toNamed(Routes.CREATE_ORDER);
+                    if (controller.selectedProducts.isEmpty) {
+                      AppToasts.showErrorToast(
+                        context,
+                        'Please add products to order',
+                      );
+                      return;
+                    }
+
+                    Get.toNamed(
+                      Routes.CREATE_ORDER,
+                      arguments: {
+                        'selectedCustomer': controller.selectedCustomer.value,
+                        'selectedSector': controller.selectedSector.value,
+                        'selectedTown': controller.selectedTown.value,
+
+                        'selectedProducts': controller.selectedProducts
+                            .toList(),
+                        'getAllProducts': controller.getAllProducts.toList(),
+                        'getCompaniesModel': controller.getCompaniesModel
+                            .toList(),
+                      },
+                    );
                   },
                   textColor: AppColors.blackTextColor,
                 ),
@@ -175,6 +198,8 @@ class AllProductsView extends GetView<AllProductsController> {
                           itemCount: controller.filteredProducts.length,
                           itemBuilder: (context, index) {
                             final product = controller.filteredProducts[index];
+                            final selectedProduct = controller
+                                .getProductFromOrder(product.productId ?? "");
                             return Padding(
                               padding: const EdgeInsets.symmetric(
                                 vertical: 8.0,
@@ -222,6 +247,7 @@ class AllProductsView extends GetView<AllProductsController> {
                                       ],
                                     ),
                                   ),
+
                                   RichText(
                                     text: TextSpan(
                                       children: [
@@ -234,11 +260,13 @@ class AllProductsView extends GetView<AllProductsController> {
                                               ),
                                         ),
                                         TextSpan(
-                                          text: "${product.tradePrice}",
+                                          text: selectedProduct != null
+                                              ? "${selectedProduct.price}"
+                                              : "${product.tradePrice}",
                                           style: context.displayLargeStyle!
                                               .copyWith(
                                                 color: AppColors.blackTextColor,
-                                                fontWeight: FontWeight.normal,
+                                                fontWeight: FontWeight.bold,
                                               ),
                                         ),
                                       ],
@@ -257,7 +285,10 @@ class AllProductsView extends GetView<AllProductsController> {
                                               ),
                                         ),
                                         TextSpan(
-                                          text: "",
+                                          text:
+                                              selectedProduct?.quantity
+                                                  .toString() ??
+                                              "",
                                           style: context.displayLargeStyle!
                                               .copyWith(
                                                 color: AppColors.blackTextColor,
@@ -280,7 +311,11 @@ class AllProductsView extends GetView<AllProductsController> {
                                               ),
                                         ),
                                         TextSpan(
-                                          text: "",
+                                          text: selectedProduct?.bonus != 0
+                                              ? selectedProduct?.bonus
+                                                    .toString()
+                                              : "",
+                                              
                                           style: context.displayLargeStyle!
                                               .copyWith(
                                                 color: AppColors.blackTextColor,
@@ -303,7 +338,11 @@ class AllProductsView extends GetView<AllProductsController> {
                                               ),
                                         ),
                                         TextSpan(
-                                          text: "",
+                                      
+                                              text: selectedProduct?.discRatio != 0.0
+                                              ? selectedProduct?.discRatio
+                                                    .toString()
+                                              : "",
                                           style: context.displayLargeStyle!
                                               .copyWith(
                                                 color: AppColors.blackTextColor,
@@ -313,6 +352,7 @@ class AllProductsView extends GetView<AllProductsController> {
                                       ],
                                     ),
                                   ),
+
                                   SizedBox(
                                     height: 24,
                                     width: 24,
@@ -499,16 +539,31 @@ class CompanySelectionBottomSheet extends GetView<AllProductsController> {
   }
 }
 
-class ProductBottomSheet extends StatelessWidget {
+class ProductBottomSheet extends GetView<AllProductsController> {
   final GetAllProductsModel product;
   const ProductBottomSheet({super.key, required this.product});
 
   @override
   Widget build(BuildContext context) {
     final TextEditingController qtyController = TextEditingController();
-    final TextEditingController bonusController = TextEditingController();
-    final TextEditingController discController = TextEditingController();
-    final TextEditingController priceController = TextEditingController();
+    final TextEditingController bonusController = TextEditingController(
+      text: "0",
+    );
+    final TextEditingController discController = TextEditingController(
+      text: "0",
+    );
+    final TextEditingController priceController = TextEditingController(
+      text: product.tradePrice.toString(),
+    );
+
+    // Check if product is already in order and pre-fill values
+    final existingProduct = controller.getProductFromOrder(product.productId!);
+    if (existingProduct != null) {
+      qtyController.text = existingProduct.quantity.toString();
+      bonusController.text = existingProduct.bonus.toString();
+      discController.text = existingProduct.discRatio.toString();
+      priceController.text = existingProduct.price.toString();
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -544,11 +599,11 @@ class ProductBottomSheet extends StatelessWidget {
             children: [
               Expanded(
                 child: CustomTextFormField(
-                  label: "Quantity",
+                  label: "Quantity*",
                   labelColor: AppColors.blackTextColor,
                   controller: qtyController,
                   hintText: "Qty",
-                  keyboardType: TextInputType.phone,
+                  keyboardType: TextInputType.number,
                   borderColor: AppColors.darkGreyColor,
                   labelfontSize: 14,
                 ),
@@ -560,7 +615,7 @@ class ProductBottomSheet extends StatelessWidget {
                   label: "Bonus",
                   labelColor: AppColors.blackTextColor,
                   hintText: "Bns%",
-                  keyboardType: TextInputType.phone,
+                  keyboardType: TextInputType.number,
                   borderColor: AppColors.darkGreyColor,
                   labelfontSize: 14,
                 ),
@@ -577,7 +632,7 @@ class ProductBottomSheet extends StatelessWidget {
                   labelColor: AppColors.blackTextColor,
                   controller: discController,
                   hintText: "Disc%",
-                  keyboardType: TextInputType.phone,
+                  keyboardType: TextInputType.number,
                   borderColor: AppColors.darkGreyColor,
                   labelfontSize: 14,
                 ),
@@ -589,7 +644,7 @@ class ProductBottomSheet extends StatelessWidget {
                   label: "Price",
                   labelColor: AppColors.blackTextColor,
                   hintText: "${product.tradePrice}",
-                  keyboardType: TextInputType.phone,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
                   borderColor: AppColors.darkGreyColor,
                   labelfontSize: 14,
                 ),
@@ -641,7 +696,12 @@ class ProductBottomSheet extends StatelessWidget {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    if (existingProduct != null) {
+                      controller.removeProductFromOrder(product.productId!);
+                    }
+                    Get.back();
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -650,7 +710,7 @@ class ProductBottomSheet extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    "Remove",
+                    existingProduct != null ? "Remove" : "Cancel",
                     style: context.bodySmallStyle!.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -661,7 +721,53 @@ class ProductBottomSheet extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    // Validate quantity
+                    if (qtyController.text.isEmpty ||
+                        int.parse(qtyController.text) <= 0) {
+                      AppToasts.showErrorToast(
+                        context,
+                        'Please enter a valid quantity',
+                      );
+                      return;
+                    }
+
+                    // Check stock availability
+                    if (int.parse(qtyController.text) >
+                        (product.currentStock ?? 0)) {
+                      AppToasts.showErrorToast(
+                        context,
+                        'Quantity exceeds available stock',
+                      );
+                      return;
+                    }
+
+                    controller.addProductToOrder(
+                      OrderProducts(
+                        companyOrderId: product.companyId!,
+                        productId: product.productId!,
+                        productName: product.productName!,
+                        quantity: int.parse(qtyController.text),
+                        price: double.parse(
+                          priceController.text.isEmpty
+                              ? product.tradePrice.toString()
+                              : priceController.text,
+                        ),
+                        bonus: int.parse(
+                          bonusController.text.isEmpty
+                              ? '0'
+                              : bonusController.text,
+                        ),
+                        discRatio: double.parse(
+                          discController.text.isEmpty
+                              ? '0.0'
+                              : discController.text,
+                        ),
+                      ),
+                    );
+
+                    Get.back();
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -670,7 +776,7 @@ class ProductBottomSheet extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    "Update",
+                    existingProduct != null ? "Update" : "Add to Order",
                     style: context.bodySmallStyle!.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,

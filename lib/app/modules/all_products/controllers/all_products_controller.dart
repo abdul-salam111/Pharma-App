@@ -4,34 +4,182 @@ import 'package:pharma_app/app/core/utils/apptoast.dart';
 import 'package:pharma_app/app/data/models/get_models/get_all_products_model.dart';
 import 'package:pharma_app/app/data/models/get_models/get_companies_model.dart';
 import 'package:pharma_app/app/data/models/get_models/get_customers_model.dart';
+import 'package:pharma_app/app/data/models/get_models/get_sectors_model.dart';
+import 'package:pharma_app/app/data/models/get_models/get_towns_model.dart';
+import 'package:pharma_app/app/data/models/post_models/create_order_for_local.dart';
 
 class AllProductsController extends GetxController {
-  // ================ Text Controllers & Focus Nodes ================
+  ///////// selected customer details //////////
+  final Rx<GetSectorsModel?> selectedSector = Rx<GetSectorsModel?>(null);
+  final Rx<GetTownsModel?> selectedTown = Rx<GetTownsModel?>(null);
+  final Rx<GetCustomersModel?> selectedCustomer = Rx<GetCustomersModel?>(null);
+
+  // ================ Existing variables ================
   final TextEditingController searchController = TextEditingController();
   final TextEditingController companySearchController = TextEditingController();
   final FocusNode searchFocusNode = FocusNode();
   final FocusNode companySearchFocusNode = FocusNode();
 
-  // ================ Observable Variables ================
   var isLoading = false.obs;
   var isCompaniesLoading = false.obs;
-  // Products
   RxList<GetAllProductsModel> getAllProducts = <GetAllProductsModel>[].obs;
   RxList<GetAllProductsModel> filteredProducts = <GetAllProductsModel>[].obs;
-
-  // Companies
   RxList<GetCompaniesModel> getCompaniesModel = <GetCompaniesModel>[].obs;
   RxList<GetCompaniesModel> filteredCompanies = <GetCompaniesModel>[].obs;
   RxString selectedCompany = "All Companies".obs;
   RxString selectedCompanyId = "".obs;
 
-  // Totals
+  // ================ Order Selection Variables ================
+  RxList<OrderProducts> selectedProducts = <OrderProducts>[].obs;
   RxDouble totalAmount = 0.0.obs;
   RxDouble companyTotal = 0.0.obs;
   RxInt totalItems = 0.obs;
   RxInt companyTotalItems = 0.obs;
 
-  // ================ Lifecycle Methods ================
+  // ================ Product Selection Methods ================
+  void addProductToOrder(OrderProducts product) {
+    // Check if product already exists
+    final existingIndex = selectedProducts.indexWhere(
+      (p) => p.productId == product.productId,
+    );
+
+    if (existingIndex != -1) {
+      // Update existing product
+      selectedProducts[existingIndex] = product;
+    } else {
+      // Add new product
+      selectedProducts.add(product);
+    }
+    calculateTotals();
+  }
+
+  void removeProductFromOrder(String productId) {
+    selectedProducts.removeWhere((p) => p.productId == productId);
+    calculateTotals();
+  }
+
+  void updateProductInOrder(OrderProducts updatedProduct) {
+    final index = selectedProducts.indexWhere(
+      (p) => p.productId == updatedProduct.productId,
+    );
+
+    if (index != -1) {
+      selectedProducts[index] = updatedProduct;
+      calculateTotals();
+    }
+  }
+
+  void clearOrder() {
+    selectedProducts.clear();
+    calculateTotals();
+  }
+
+  // ================ Calculation Methods ================
+  void calculateTotals() {
+    // Calculate grand totals (all products)
+    totalAmount.value = selectedProducts.fold(
+      0.0,
+      (sum, product) => sum + (product.quantity * product.price),
+    );
+
+    // COUNT DISTINCT PRODUCTS (not sum quantities)
+    totalItems.value = selectedProducts.length;
+
+    // Calculate company-specific totals based on selected company filter
+    if (selectedCompanyId.value.isNotEmpty) {
+      final companyProducts = selectedProducts.where((product) {
+        final productCompanyId = _getProductCompanyId(product.productId);
+        return productCompanyId == selectedCompanyId.value;
+      }).toList();
+
+      companyTotal.value = companyProducts.fold(
+        0.0,
+        (sum, product) => sum + (product.quantity * product.price),
+      );
+
+      // COUNT DISTINCT PRODUCTS FROM THIS COMPANY (not sum quantities)
+      companyTotalItems.value = companyProducts.length;
+    } else {
+      companyTotal.value = 0.0;
+      companyTotalItems.value = 0;
+    }
+  }
+
+  String _getProductCompanyId(String productId) {
+    // Find the product in getAllProducts to get its company ID
+    final product = getAllProducts.firstWhere(
+      (p) => p.productId == productId,
+      orElse: () => GetAllProductsModel(),
+    );
+    return product.companyId?.toString() ?? '';
+  }
+
+  // Check if product is in order
+  bool isProductInOrder(String productId) {
+    return selectedProducts.any((p) => p.productId == productId);
+  }
+
+  // Get product from order
+  OrderProducts? getProductFromOrder(String productId) {
+    try {
+      return selectedProducts.firstWhere((p) => p.productId == productId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Prepare order for next screen
+  OrderItems prepareOrder(GetCustomersModel customer) {
+    // Group products by company
+    final Map<String, List<OrderProducts>> groupedProducts = {};
+
+    for (var product in selectedProducts) {
+      final companyId = _getProductCompanyId(product.productId);
+      if (!groupedProducts.containsKey(companyId)) {
+        groupedProducts[companyId] = [];
+      }
+      groupedProducts[companyId]!.add(product);
+    }
+
+    // Create OrderCompanies list
+    final List<OrderCompanies> companies = groupedProducts.entries.map((entry) {
+      final companyProducts = entry.value;
+      final company = getCompaniesModel.firstWhere(
+        (c) => c.id?.toString() == entry.key || c.companyId == entry.key,
+        orElse: () => GetCompaniesModel(),
+      );
+
+      final totalAmount = companyProducts.fold(
+        0.0,
+        (sum, product) => sum + (product.quantity * product.price),
+      );
+
+      // COUNT DISTINCT PRODUCTS (not sum quantities)
+      final totalItems = companyProducts.length;
+
+      return OrderCompanies(
+        orderId: 0,
+        companyId: entry.key,
+        companyName: company.companyName ?? 'Unknown Company',
+
+        products: companyProducts,
+        companyTotalAmount: totalAmount,
+        companyTotalItems: totalItems, // This now counts distinct products
+      );
+    }).toList();
+
+    // Create OrderItems
+    return OrderItems(
+      customerId: customer.customerId!,
+      customerName: customer.customerName!,
+      companies: companies,
+      orderDate: DateTime.now(),
+      totalAmount: totalAmount.value,
+      totalItems: selectedProducts.length, // Count distinct products
+    );
+  }
+
+  // ================ Existing methods ================
   @override
   void onInit() {
     super.onInit();
@@ -39,14 +187,10 @@ class AllProductsController extends GetxController {
     _setupListeners();
   }
 
-  @override
-  void onClose() {
-    _disposeControllers();
-    super.onClose();
-  }
-
-  // ================ Initialization Methods ================
   void _initializeData() {
+    selectedCustomer.value = Get.arguments[0];
+    selectedTown.value = Get.arguments[1];
+    selectedSector.value = Get.arguments[2];
     fetchProducts();
     fetchCompanies();
   }
@@ -56,16 +200,6 @@ class AllProductsController extends GetxController {
     companySearchController.addListener(filterCompanies);
   }
 
-  void _disposeControllers() {
-    searchController.removeListener(filterProducts);
-    companySearchController.removeListener(filterCompanies);
-    searchController.dispose();
-    companySearchController.dispose();
-    searchFocusNode.dispose();
-    companySearchFocusNode.dispose();
-  }
-
-  // ================ Products Methods ================
   void fetchProducts() async {
     try {
       isLoading.value = true;
@@ -81,41 +215,6 @@ class AllProductsController extends GetxController {
     }
   }
 
-  void filterProducts() {
-    final query = searchController.text.toLowerCase();
-    List<GetAllProductsModel> productsToFilter;
-
-    // First filter by company if selected
-    if (selectedCompanyId.value.isEmpty ||
-        selectedCompany.value == "All Companies") {
-      productsToFilter = List.from(getAllProducts);
-    } else {
-      productsToFilter = getAllProducts.where((product) {
-        // Try multiple matching approaches since company ID format might vary
-        String productCompanyId = product.companyId.toString();
-        String selectedId = selectedCompanyId.value.toString();
-
-        // Direct comparison
-        bool directMatch = productCompanyId == selectedId;
-
-        // In case the product uses the company's ID field instead of CompanyId
-        bool idMatch = product.companyId.toString() == selectedId;
-
-        return directMatch || idMatch;
-      }).toList();
-    }
-
-    // Then filter by search query
-    if (query.isEmpty) {
-      filteredProducts.value = productsToFilter;
-    } else {
-      filteredProducts.value = productsToFilter.where((product) {
-        return product.productName?.toLowerCase().contains(query) == true;
-      }).toList();
-    }
-  }
-
-  // ================ Companies Methods ================
   void fetchCompanies() async {
     try {
       isCompaniesLoading.value = true;
@@ -128,6 +227,32 @@ class AllProductsController extends GetxController {
       );
     } finally {
       isCompaniesLoading.value = false;
+    }
+  }
+
+  void filterProducts() {
+    final query = searchController.text.toLowerCase();
+    List<GetAllProductsModel> productsToFilter;
+
+    // First filter by company if selected
+    if (selectedCompanyId.value.isEmpty ||
+        selectedCompany.value == "All Companies") {
+      productsToFilter = List.from(getAllProducts);
+    } else {
+      productsToFilter = getAllProducts.where((product) {
+        String productCompanyId = product.companyId.toString();
+        String selectedId = selectedCompanyId.value.toString();
+        return productCompanyId == selectedId;
+      }).toList();
+    }
+
+    // Then filter by search query
+    if (query.isEmpty) {
+      filteredProducts.value = productsToFilter;
+    } else {
+      filteredProducts.value = productsToFilter.where((product) {
+        return product.productName?.toLowerCase().contains(query) == true;
+      }).toList();
     }
   }
 
@@ -147,26 +272,13 @@ class AllProductsController extends GetxController {
     selectedCompanyId.value = companyId ?? "";
     companySearchController.clear();
     Get.back();
-
-    // Apply filtering after company selection
     filterProducts();
-
-    // Calculate totals for the selected company
-    calculateTotals();
+    calculateTotals(); // Recalculate totals when company changes
   }
 
   void clearCompanySearch() {
     companySearchController.clear();
     filteredCompanies.value = List.from(getCompaniesModel);
-  }
-
-  // ================ Utility Methods ================
-  void calculateTotals() {
-    // Calculate totals based on filtered products
-    double totalAmt = 0.0;
-    double companyAmt = 0.0;
-    totalAmount.value = totalAmt;
-    companyTotal.value = companyAmt;
   }
 
   void refreshData() {
@@ -180,146 +292,5 @@ class AllProductsController extends GetxController {
     return getAllProducts.where((product) {
       return product.companyId.toString() == companyId;
     }).length;
-  }
-}
-
-class OrderItems {
-  final GetCustomersModel customer;
-  final List<OrderCompanies> companies;
-  final DateTime orderDate;
-  final DateTime? syncDate;
-  final String? syncedStatus;
-  final double totalAmount;
-  final int totalItems;
-
-  OrderItems({
-    required this.customer,
-    required this.companies,
-    required this.orderDate,
-    this.syncDate,
-    this.syncedStatus,
-    required this.totalAmount,
-    required this.totalItems,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'customerId': customer.customerId,
-      'orderDate': orderDate.toIso8601String(),
-      'syncDate': syncDate?.toIso8601String(),
-      'syncedStatus': syncedStatus,
-      'totalAmount': totalAmount,
-      'totalItems': totalItems,
-    };
-  }
-
-  factory OrderItems.fromMap(
-    Map<String, dynamic> map,
-    GetCustomersModel customer,
-    List<OrderCompanies> companies,
-  ) {
-    return OrderItems(
-      customer: customer,
-      companies: companies,
-      orderDate: DateTime.parse(map['orderDate']),
-      syncDate: map['syncDate'] != null
-          ? DateTime.parse(map['syncDate'])
-          : null,
-      syncedStatus: map['syncedStatus'],
-      totalAmount: map['totalAmount'],
-      totalItems: map['totalItems'],
-    );
-  }
-}
-
-class OrderCompanies {
-  final int companyOrderId; // local PK
-  final int orderId; // FK to OrderItems
-  final GetCompaniesModel company;
-  final List<OrderProducts> products;
-  final double companyTotalAmount;
-  final int companyTotalItems;
-
-  OrderCompanies({
-    required this.companyOrderId,
-    required this.orderId,
-    required this.company,
-    required this.products,
-    required this.companyTotalAmount,
-    required this.companyTotalItems,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'companyOrderId': companyOrderId,
-      'orderId': orderId,
-      'companyId': company.companyId, // assuming field exists
-      'companyTotalAmount': companyTotalAmount,
-      'companyTotalItems': companyTotalItems,
-      // products will be saved in OrderProducts table
-    };
-  }
-
-  factory OrderCompanies.fromMap(
-    Map<String, dynamic> map,
-    GetCompaniesModel company,
-    List<OrderProducts> products,
-  ) {
-    return OrderCompanies(
-      companyOrderId: map['companyOrderId'],
-      orderId: map['orderId'],
-      company: company,
-      products: products,
-      companyTotalAmount: map['companyTotalAmount'],
-      companyTotalItems: map['companyTotalItems'],
-    );
-  }
-}
-
-class OrderProducts {
-  final int orderProductId; // local PK
-  final int companyOrderId; // FK to OrderCompanies
-  final String productId;
-  final String productName;
-  final int qty;
-  final int bns;
-  final double discRatio;
-  final double price;
-
-  OrderProducts({
-    required this.orderProductId,
-    required this.companyOrderId,
-    required this.productId,
-    required this.productName,
-    required this.qty,
-    required this.bns,
-    required this.discRatio,
-    required this.price,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'orderProductId': orderProductId,
-      'companyOrderId': companyOrderId,
-      'productId': productId,
-      'productName': productName,
-      'qty': qty,
-      'bns': bns,
-      'discRatio': discRatio,
-      'price': price,
-    };
-  }
-
-  factory OrderProducts.fromMap(Map<String, dynamic> map) {
-    return OrderProducts(
-      orderProductId: map['orderProductId'],
-      companyOrderId: map['companyOrderId'],
-      productId: map['productId'],
-      productName: map['productName'],
-      qty: map['qty'],
-      bns: map['bns'],
-      discRatio: map['discRatio'],
-      price: map['price'],
-    );
   }
 }

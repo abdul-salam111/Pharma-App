@@ -85,6 +85,7 @@ class SelectCustomerController extends GetxController {
     try {
       isLoadingCustomers.value = true;
       final List<GetCustomersModel> fetchedCustomers = Get.arguments[4];
+  
       _allCustomers.clear();
       _allCustomers.addAll(fetchedCustomers);
     } catch (error) {
@@ -134,12 +135,13 @@ class SelectCustomerController extends GetxController {
     selectedCustomer.value = null;
 
     if (town != null && selectedSector.value != null) {
+      
       // Filter customers based on selected sector and town
       final filteredCustomers = _allCustomers
           .where(
             (customer) =>
                 (customer.actualTownId.toString() ==
-                selectedTown.value!.id.toString()),
+                selectedTown.value!.actualTownId.toString()),
           )
           .toList();
 
